@@ -5,7 +5,7 @@
         "option_name": "EuropeanOption",
         "solver_name": "MarkovianSolver",
         "exercise_date": [0.25,  0.5,  0.75],
-        "style": "put",
+        "style": "call",
         "T": 1.0,
         "dt": 0.01,
         "dim": 1,
@@ -20,7 +20,7 @@
         "batch_size": 128,
         "sample_size": 30,
         "sensors": 20,
-        "initial_mode": "partial_fixed"
+        "initial_mode": "fixed"
     },
 
     "net_config": {
