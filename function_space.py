@@ -12,7 +12,6 @@ class DenseNet(tf.keras.Model):
     """
     The feed forward neural network
     """
-
     def __init__(self, num_layers: List[int], activation: Optional[str]):
         super(DenseNet, self).__init__()
         # self.activation = activation
@@ -24,7 +23,6 @@ class DenseNet(tf.keras.Model):
                 gamma_initializer=tf.random_uniform_initializer(0.1, 0.5)
             )
             for _ in range(len(num_layers))]
-
         self.dense_layers = [tf.keras.layers.Dense(num_layers[i],
                                                    kernel_initializer=tf.initializers.GlorotUniform(),
                                                    bias_initializer=tf.random_uniform_initializer(0.01, 0.05),
@@ -153,9 +151,11 @@ class DenseOperator(tf.keras.Model):
         self.w = tf.keras.layers.Dense(self.num_outputs, activation='relu')
     
     def call(self, x: tf.Tensor):
-        # the x has shape batch_size + (time_steps, num_funcs), where batch_size is a 3-tuple
-        # return: batch_size + (num_outputs)
-        # flat_dim = tf.shape(x)[-2] * tf.shape(x)[-1]
+        """
+        the x has shape batch_size + (time_steps, num_funcs), where batch_size is a 3-tuple
+        return: batch_size + (num_outputs)
+        flat_dim = tf.shape(x)[-2] * tf.shape(x)[-1]
+        """
         x = tf.reshape(x, [-1, x.shape[1], x.shape[2], x.shape[3] * x.shape[4]])
         x = self.w(x)
         return x
@@ -174,13 +174,14 @@ class KernelOperator(DenseOperator):
         self.conv2 = tf.keras.layers.Conv1D(self.filters, 3, padding='valid', activation='relu')
     
     def call(self, x: tf.Tensor):
-        # the x has shape batch_size + (time_steps, num_funcs), where batch_size is a 3-tuple
-        # return: batch_size + (num_outputs)
+        """
+        the x has shape batch_size + (time_steps, num_funcs), where batch_size is a 3-tuple
+        return: batch_size + (num_outputs)
+        """
         x = self.conv1(x)
         x = self.conv2(x)
         return super(KernelOperator, self).call(x)
-
-
+    
 class DeepKernelONetwithoutPI(DeepONet):
     def __init__(self, branch_layer: List[int], 
                  trunk_layer: List[int],  
@@ -212,10 +213,7 @@ class DeepKernelONetwithoutPI(DeepONet):
         u_tensor = tf.concat([latent_state, u_par], axis=-1)
         inputs_for_deeponetnopi = time_tensor, state_tensor, u_tensor
         return super(DeepKernelONetwithoutPI, self).call(inputs_for_deeponetnopi)
-
-
-
-
+    
 class DeepKernelONetwithPI(DeepONetwithPI):
     def __init__(self, branch_layer: List[int], 
                  trunk_layer: List[int], 
@@ -249,36 +247,3 @@ class DeepKernelONetwithPI(DeepONetwithPI):
         u_tensor = tf.concat([latent_state, u_par], axis=-1)
         inputs_for_deeponetpi = time_tensor, state_tensor, u_tensor
         return super(DeepKernelONetwithPI, self).call(inputs_for_deeponetpi)
-
-
-
-
-if __name__ == "__main__":
-    import numpy as np
-    inputs = tf.keras.layers.Input(shape=(None, None, 3,4))
-    pi_layer_1= PermutationInvariantLayer(5)
-    pi_layer_2= PermutationInvariantLayer(3)
-    pp = pi_layer_2(pi_layer_1(inputs))
-    x = np.array([[[[[1.,2.,3.,4.], [4.,3.,2.,1.], [3.,5.,4.,6.]], [[5.,4.,3.,2.], [2.,3.,4.,5.], [3.,5.,4.,6.]]]]])
-    x_pi = np.array([[[[[4.,3.,2.,1.], [3.,5.,4.,6.], [1.,2.,3.,4.]], [[2.,3.,4.,5.], [3.,5.,4.,6.], [5.,4.,3.,2.]]]]])
-    x = tf.tile(x, [2, 1, 1, 1, 1])
-    x = tf.tile(x, [1, 2, 1, 1, 1])
-    y = pi_layer_2(pi_layer_1(x))
-    y_pi = pi_layer_2(pi_layer_1(x_pi))
-    print(y)
-    print(y_pi)
-    model = tf.keras.Model(inputs=inputs, outputs=pp)
-    print(model(x))
-    print(model(x_pi))
-    deeponet = DeepONetwithPI([3,3], [3,3], [6, 6], 10)
-    assets = tf.random.normal([1, 1, 1, 30])
-    t = tf.random.uniform([1, 1, 1, 1])
-    u_hat = tf.random.normal([1, 1, 1, 4])
-    y = deeponet((t, assets, u_hat))
-    print(y)
-    ko = KernelOperator(2, 10, 6)
-    x = tf.random.normal((128, 30, 100, 50, 2))
-    print(ko(x).shape)
-    print(ko.summary())
-
-

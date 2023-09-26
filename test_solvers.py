@@ -1,19 +1,11 @@
 import tensorflow as tf
-import numpy as np
-from data_generators import DiffusionModelGenerator
 from function_space import BlackScholesFormula
 # from markov_solver import MarkovianSolver, BaseBSDESolver, BSDEMarkovianModel
 from solvers import MarkovianSolver
-from sde import GeometricBrownianMotion, CEVModel, HestonModel
-from options import EuropeanOption, GeometricAsian, LookbackOption
-from config import Config
-
+from sde import GeometricBrownianMotion
+from options import EuropeanOption
 import json
 import munch
-import sde as eqn
-import options as opts
-import solvers as sls
-
 
 sde_list = ["GBM", "TGBM", "SV", "CEV", "SVJ"]
 option_list = ["European", "EuropeanPut", "Lookback", "Asian", "Basket", "BasketnoPI", "Swap", "TimeEuropean", "BermudanPut"]

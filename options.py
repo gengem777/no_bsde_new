@@ -93,10 +93,8 @@ class EuropeanOption(BaseOption):
         K = k * self.config.x_init
         d1 = (tf.math.log(x / K) + (r + vol ** 2 / 2) * (T - t)) / (vol * tf.math.sqrt(T - t) + 0.000001)
         d2 = d1 - vol * tf.math.sqrt(T - t)
-        if self.style == "call":
-            return x * dist.cdf(d1) - K * tf.exp(-r * (T - t)) * dist.cdf(d2)
-        else:
-            return K * tf.exp(-r * (T - t)) * dist.cdf(-d2) - x * dist.cdf(-d1)
+        return x * dist.cdf(d1) - K * tf.exp(-r * (T - t)) * dist.cdf(d2)
+        
     
     def exact_delta(self, t: tf.Tensor, x: tf.Tensor, params: tf.Tensor):
         T = self.config.T
@@ -309,28 +307,6 @@ class LookbackOption(EuropeanOption):
         y_t = tf.reduce_mean(y_t, axis=-1, keepdims=True)
         return y_t
 
-    # def exact_delta(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor):
-    #     """
-    #     In this x has the dimension:
-    #     (B, M, T, d+d) since this ia a concat with markovian variable
-    #     """
-    #     dim = self.config.dim
-    #     T = self.config.T
-    #     r = tf.expand_dims(u_hat[:, :, :, 0], -1)
-    #     vol = tf.expand_dims(u_hat[:, :, :, 1], -1)
-    #     X_t = x[...,:dim]
-    #     with tf.GradientTape(watch_accessed_variables=False) as tape:
-    #         tape.watch(X_t)
-    #         m_t = x[...,dim:]
-    #         a_1 = (tf.math.log(X_t/m_t) + (r + vol ** 2/2) * (T - t))/(vol * tf.math.sqrt(T - t))
-    #         a_2 = a_1 - vol * tf.math.sqrt(T - t)
-    #         a_3 = a_1 - 2 * r/vol * tf.math.sqrt(T - t)
-    #         y_t = X_t * dist.cdf(a_1) - m_t * tf.exp(-r * (T-t)) * dist.cdf(a_2) - \
-    #             X_t * vol ** 2/(2 * r) * (dist.cdf(-a_1) - tf.exp(-r * (T-t)) * (m_t/X_t) ** (2 * r / vol**2) * dist.cdf(-a_3)) 
-    #         delta = tape.gradient(y_t, X_t)
-    #     z = vol * X_t * delta
-    #     return z
-
 class GeometricAsian(EuropeanOption):
     def __init__(self, config):
         """
@@ -535,7 +511,7 @@ class InterestRateSwap(BaseOption):
         """
         float_leg = self.sde.zcp_value(t, x, u_hat, terminal_date - self.delta_t) - \
             self.sde.zcp_value(t, x, u_hat, terminal_date)
-        return tf.where(t > terminal_date - self.delta_t, 0., float_leg)
+        return tf.where(t > terminal_date - self.delta_t + 0.001, 0., float_leg)
     
     def swap_value(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
@@ -618,24 +594,6 @@ class ZeroCouponBond(BaseOption):
         p_12 = self.sde.zcp_value(1.0, x[:,:,-1,:], u_hat[:,:,-1,:], 2.0)
         return 1.0 - (1.0 + self.fix_rate) * p_12
     
-    # def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
-    #     """
-    #     t: [B, M, N, 1]
-    #     x: [B, M, N, 1]
-    #     u_hat: [B, M, N, 4]
-    #     """
-    #     terminal_date = self.config.T
-    #     kappa = tf.expand_dims(u_hat[..., 0], axis=-1)
-    #     theta = tf.expand_dims(u_hat[..., 1], axis=-1)
-    #     sigma = tf.expand_dims(u_hat[..., 2], axis=-1)
-    #     B = (1 - tf.exp(-kappa * (2. - t)))/ kappa
-    #     A = tf.exp((B - 2. + t)*(kappa**2 * theta - sigma**2/2)/kappa**2 +\
-    #                  (sigma*B)**2/(4*kappa))
-    #     p_t2 = A * tf.exp(-B * tf.reduce_sum(x, axis=-1, keepdims=True))
-    #     # p_t2 = tf.where(t > terminal_date, 1., p)
-    #     # p_12 =  self.sde.zcp_value(1.0, x, u_hat, 2.0)
-    #     return p_t2 # (1.0 - (1.0 + self.fix_rate) * p_12 ) * p_t1
-    
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
         t: [B, M, N, 1]
@@ -656,7 +614,7 @@ class ZeroCouponBond(BaseOption):
                      (sigma*B_)**2/(4*kappa))
         p_t2 = A_ * tf.exp(-B_ * tf.reduce_sum(x, axis=-1, keepdims=True))
         v = p_t1 - (1 + self.fix_rate) * p_t2
-        return v # tf.where(t > terminal_date, 1., p)
+        return v 
 
 
     

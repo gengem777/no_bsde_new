@@ -1,15 +1,12 @@
 import tensorflow as tf
 from options import EuropeanOption, GeometricAsian, LookbackOption, EuropeanSwap, InterestRateSwap
 from sde import GeometricBrownianMotion, HullWhiteModel
-
 import json
 import munch
-import sde as eqn
-import options as opts
-import solvers as sls
+
 
 sde_list = ["GBM", "TGBM", "SV", "HW", "SVJ"]
-option_list = ["European", "EuropeanPut", "Lookback", "Asian", "Basket", "BasketnoPI", "Swap", "TimeEuropean", "BermudanPut"]
+option_list = ["European", "EuropeanPut", "Lookback", "Asian", "Basket", "BasketnoPI", "Swap", "Swaption", "TimeEuropean", "BermudanPut"]
 dim_list = [1, 3, 5, 10, 20]
 
 def load_config(sde_name: str, option_name: str, dim: int=1):
@@ -20,7 +17,7 @@ def load_config(sde_name: str, option_name: str, dim: int=1):
         raise ValueError(f"please input right sde_name in {sde_list},\
                           option_name in {option_list} and dim in {dim_list}")
     else:
-        json_path = f'./config/{sde_name}_{option_name}_{dim}.json'
+        json_path = f'./configs/{sde_name}_{option_name}_{dim}.json'
     with open(json_path) as json_data_file:
         config = json.load(json_data_file)
     
@@ -42,17 +39,16 @@ class TestEuropeanOption(tf.test.TestCase):
         u_sde = sde.sample_parameters(1)
         u_opt = opt.sample_parameters(1)
         u_hat = tf.concat([u_sde, u_opt], axis=-1)
-        x,_ = sde.sde_simulation(u_hat, config.eqn_config.sample_size)
-        time_stamp = tf.range(0, config.eqn_config.T, config.eqn_config.dt)
-        time_steps = int(config.eqn_config.T / config.eqn_config.dt)
+        x, _ = sde.sde_simulation(u_hat, config.eqn_config.sample_size)
+        time_stamp = tf.range(0, config.eqn_config.T + config.eqn_config.dt, config.eqn_config.dt)
+        time_steps = int(config.eqn_config.T / config.eqn_config.dt) + 1
         time_stamp = tf.reshape(time_stamp, [1, 1, time_steps, 1])
         t = tf.tile(time_stamp, [u_hat.shape[0], config.eqn_config.sample_size, 1, 1])
         u_hat = sde.expand_batch_inputs_dim(u_hat)
-        # print(u_hat)
         price = opt.exact_price(t, x, u_hat)
         strike = tf.expand_dims(u_hat[:,:,-1,-1], axis=-1)
         exact_terminal_payoff = tf.nn.relu(x[:,:,-1,:] - strike)
-        # self.assertAllLessEqual(tf.reduce_mean(tf.abs(price[:, :, -1, :] - exact_terminal_payoff)), 0.01)
+        self.assertAllLessEqual(tf.reduce_mean(tf.abs(price[:, :, -1, :] - exact_terminal_payoff)), 0.01)
 
     def testSampleparameters(self):
         config = load_config("GBM", "European", 1)
@@ -137,8 +133,8 @@ class TestlookbackOption(tf.test.TestCase):
         x,_ = sde.sde_simulation(u_hat, config.eqn_config.sample_size)
         x_m = opt.markovian_var(x)
         arg_x = tf.concat([x, x_m], axis=-1)
-        time_stamp = tf.range(0, config.eqn_config.T, config.eqn_config.dt)
-        time_steps = int(config.eqn_config.T / config.eqn_config.dt)
+        time_stamp = tf.range(0, config.eqn_config.T+config.eqn_config.dt, config.eqn_config.dt)
+        time_steps = int(config.eqn_config.T / config.eqn_config.dt)+1
         time_stamp = tf.reshape(time_stamp, [1, 1, time_steps, 1])
         t = tf.tile(time_stamp, [u_hat.shape[0], config.eqn_config.sample_size, 1, 1])
         u_hat = sde.expand_batch_inputs_dim(u_hat)
@@ -165,8 +161,8 @@ class TestSwap(tf.test.TestCase):
         u_opt = opt.sample_parameters(1)
         u_hat = tf.concat([u_sde, u_opt], axis=-1)
         x,_ = sde.sde_simulation(u_hat, config.eqn_config.sample_size)
-        time_stamp = tf.range(0, config.eqn_config.T, config.eqn_config.dt)
-        time_steps = int(config.eqn_config.T / config.eqn_config.dt)
+        time_stamp = tf.range(0, config.eqn_config.T+config.eqn_config.dt, config.eqn_config.dt)
+        time_steps = int(config.eqn_config.T / config.eqn_config.dt)+1
         time_stamp = tf.reshape(time_stamp, [1, 1, time_steps, 1])
         t = tf.tile(time_stamp, [u_hat.shape[0], config.eqn_config.sample_size, 1, 1])
         u_hat = sde.expand_batch_inputs_dim(u_hat)
@@ -179,7 +175,7 @@ class TestSwap(tf.test.TestCase):
     
 class TestInterestRateSwap(tf.test.TestCase):
     def setUp(self):
-        self.config = load_config("HW", "Swap", 1)
+        self.config = load_config("HW", "Swaption", 1)
         self.sde = HullWhiteModel(self.config)
         self.option = InterestRateSwap(self.config)
         self.u_hat = tf.constant([[0.045, 0.4, 0.03, 0.011]])
@@ -198,19 +194,20 @@ class TestInterestRateSwap(tf.test.TestCase):
             return p
         r = tf.ones((1,1,1)) * 0.02 # suppose r_t = 0.02
         T_1 = 1.0
-        T_2 = 1.25
+        T_2 = 2.0
         for t in [0, 0.5, 1]:
-            p1 = self.option.one_float_leg(t, r, tf.expand_dims(self.u_hat, axis=1), 1.25)
+            p1 = self.option.one_float_leg(t, r, tf.expand_dims(self.u_hat, axis=1), 2.0)
             p2 = zcp(t, r, T_1) - zcp(t, r, T_2)
             self.assertAllLessEqual(tf.reduce_mean(tf.abs(p1 - p2)), 1e-7)
 
     def testswapvalue(self):
-        config1 = load_config("HW", "Swap", 1)
+        config1 = load_config("HW", "Swaption", 1)
         option1 = InterestRateSwap(config1)
         option1.reset_dates([1., 2.])
         kappa = 0.045
         theta = 0.4 
         sigma = 0.03
+        strike = option1.fix_rate
         def zcp(t, r, T):
             B = (1 - tf.exp(-kappa * (T - t)))/ kappa
             A = tf.exp((B - T + t)*(kappa**2 * theta 
@@ -220,8 +217,9 @@ class TestInterestRateSwap(tf.test.TestCase):
             return p
         r = tf.ones((1,1,1)) * 0.02
         for t in [0, 0.5, 1]:
-            p1 =  option1.swap_value(t, r, tf.expand_dims(self.u_hat, axis=1))
-            p2 =  (0.02 * zcp(t, r, 2) - (zcp(t, r, 1) - zcp(t, r, 2))) * option1.notional
+            p1 = option1.swap_value(t, r, tf.expand_dims(self.u_hat, axis=1))
+            p2 = (strike * zcp(t, r, 2) - (zcp(t, r, 1) - zcp(t, r, 2))) * option1.notional 
+            print(p1, p2)
             self.assertAllLessEqual(tf.reduce_mean(tf.abs(p1 - p2)), 1e-7)
 
 

@@ -1,16 +1,12 @@
 import tensorflow as tf
 import numpy as np
-from sde import CEVModel, HestonModel, GeometricBrownianMotion, HullWhiteModel
-# from config import Config
-
+from sde import HestonModel, GeometricBrownianMotion, HullWhiteModel
 import json
 import munch
-import sde as eqn
-import options as opts
-import solvers as sls
+
 
 sde_list = ["GBM", "TGBM", "SV", "HW", "SVJ"]
-option_list = ["European", "EuropeanPut", "Lookback", "Asian", "Basket", "BasketnoPI", "Swap", "TimeEuropean", "BermudanPut"]
+option_list = ["European", "EuropeanPut", "Lookback", "Asian", "Basket", "BasketnoPI", "Swap", "Swaption","TimeEuropean", "BermudanPut"]
 dim_list = [1, 3, 5, 10, 20]
 
 def load_config(sde_name: str, option_name: str, dim: int=1):
@@ -21,7 +17,7 @@ def load_config(sde_name: str, option_name: str, dim: int=1):
         raise ValueError(f"please input right sde_name in {sde_list},\
                           option_name in {option_list} and dim in {dim_list}")
     else:
-        json_path = f'./config/{sde_name}_{option_name}_{dim}.json'
+        json_path = f'./configs/{sde_name}_{option_name}_{dim}.json'
     with open(json_path) as json_data_file:
         config = json.load(json_data_file)
     
@@ -37,7 +33,6 @@ class TestGeometricBrowianMotion(tf.test.TestCase):
         dim = config.eqn_config.dim
         x_init = config.eqn_config.x_init
         initial_state = sde.initial_sampler(u_hat, 10000)
-        # print(tf.reduce_mean(initial_state))
         self.assertEqual(initial_state.shape, [2, 10000, dim])
         self.assertAllLessEqual(tf.reduce_mean(initial_state - x_init), 5e-2)
 
@@ -137,7 +132,6 @@ class TestHestonModel(tf.test.TestCase):
         s_1 = np.sqrt(0.12) * 1.2
         s_2 = np.sqrt(0.11) * 1.13
         diff = tf.constant([[s_1, v_1], [s_2, v_2]])
-
         dim = config.eqn_config.dim
         M = config.eqn_config.sample_size
 
@@ -215,7 +209,7 @@ class TestHestonModel(tf.test.TestCase):
 
 class TestHullWhiteModel(tf.test.TestCase):
     def test_positivity(self):
-        config = load_config("HW", "Swap", 1)
+        config = load_config("HW", "Swaption", 1)
         sde = HullWhiteModel(config)
         u_hat = tf.constant([[0.045, 0.4, 0.03, 0.011],
                              [0.005, 0.2, 0.03, 0.011],
@@ -231,7 +225,7 @@ class TestHullWhiteModel(tf.test.TestCase):
         # self.assertAllGreaterEqual(r, 0.0)
     
     def test_drift(self):
-        config = load_config("HW", "Swap", 1)
+        config = load_config("HW", "Swaption", 1)
         sde = HullWhiteModel(config)
         u_hat = tf.constant([[0.045, 0.4, 0.03, 0.011]])
         state = tf.ones((1, 100, 1)) * 0.02
@@ -240,7 +234,7 @@ class TestHullWhiteModel(tf.test.TestCase):
         self.assertAllLessEqual(drift - drift_exact, 1e-9)
 
     def test_euler_one_step(self):
-        config = load_config("HW", "Swap", 1)
+        config = load_config("HW", "Swaption", 1)
         sde = HullWhiteModel(config)
         dt = config.eqn_config.dt
         u_hat = tf.constant([[0.045, 0.4, 0.03, 0.011]])
@@ -255,7 +249,7 @@ class TestHullWhiteModel(tf.test.TestCase):
         self.assertAllLessEqual(tf.abs(std - std_exact), 1e-3)
     
     def test_zero_coupon_bond(self):
-        config = load_config("HW", "Swap", 1)
+        config = load_config("HW", "Swaption", 1)
         sde = HullWhiteModel(config)
         T = config.eqn_config.T
         u_hat = tf.constant([[0.045, 0.4, 0.03, 0.011]])
@@ -274,7 +268,7 @@ class TestHullWhiteModel(tf.test.TestCase):
         self.assertAllLessEqual(tf.abs(p_2 - 1.0), 1e-9)
     
     def test_sde_bond(self):
-        config = load_config("HW", "Swap", 1)
+        config = load_config("HW", "Swaption", 1)
         sde = HullWhiteModel(config)
         T = config.eqn_config.T
         u_hat = tf.constant([[0.4, 0.05, 0.03, 0.011]])

@@ -54,27 +54,3 @@ class DiffusionModelGenerator(BaseGenerator):
         data = t, x, dw, u_hat 
         return (data,)
 
-
-class JumpModelGenerator(BaseGenerator):
-    """ Create batches of random points for the network training. """
-
-    def __init__(self, sde, config, option):
-        super(JumpModelGenerator, self).__init__(sde, config, option)
-
-    def __getitem__(self, idx: int):
-        """
-        Get one batch of random points in the interior of the domain to
-        train the PDE residual and with initial time to train the initial value.
-        for the parameter, we always let the risk neutral drift r be at the first entry.
-        """
-        params_batch_model = self.params_model[idx * self.batch_size:(idx + 1) * self.batch_size]
-        params_batch_option = self.params_option[idx * self.batch_size:(idx + 1) * self.batch_size]
-        x, dw, poissons, jumps = self.sde.sde_simulation(params_batch_model, self.config.M)
-        model_param = self.sde.expand_batch_inputs_dim(params_batch_model)
-        option_param = self.option.expand_batch_inputs_dim(params_batch_option)
-        params = tf.concat([model_param, option_param], -1)
-        t_stamps = self.time_stamp
-        y = self.option.exact_price(t_stamps, x, params)
-        data = t_stamps, x, dw, poissons, jumps, params
-        return (data, y)
-

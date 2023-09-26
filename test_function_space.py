@@ -1,7 +1,6 @@
 import tensorflow as tf
 from function_space import PermutationInvariantLayer, DeepONetwithPI
 import numpy as np
-
 class TestPermutationInvariantLayer(tf.test.TestCase):
     def testPIlayer(self):
         pi_layer_1= PermutationInvariantLayer(5)
