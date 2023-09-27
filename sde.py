@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Optional
 import tensorflow as tf
 import tensorflow_probability as tfp
-from typing import Tuple
 
 
 class ItoProcessDriver(ABC):
@@ -408,19 +406,6 @@ class TimeDependentGBM(GeometricBrownianMotion):
         sigma = s_0 * tf.exp(beta * (time - T))
         sigma = tf.linalg.diag(tf.tile(sigma, [1, samples, self.dim]))
         return tf.einsum('...ij,...j->...i', sigma, state)
-        
-    # def corr_matrix(self, state: tf.Tensor, u_hat: tf.Tensor):
-    #     batch = state.shape[0]
-    #     samples = state.shape[1]
-    #     if not self.dim == 1:
-    #         rho = tf.reshape(u_hat[:,5], [batch, 1, 1, 1])
-    #         rho_mat = tf.tile(rho, [1, samples, self.dim, self.dim])
-    #         i_mat = tf.eye(self.dim, batch_shape=[batch, samples])
-    #         rho_diag = tf.linalg.diag(rho_mat[...,0])
-    #         corr = i_mat - rho_diag + rho_mat
-    #     else:
-    #         corr = super(TimeDependentGBM, self).corr_matrix(state, u_hat)
-    #     return corr
     
     def drift_onestep(self, time_tensor: tf.Tensor, state_tensor: tf.Tensor, u_hat: tf.Tensor):
         r0 = tf.expand_dims(u_hat[..., 0], -1)
@@ -428,7 +413,6 @@ class TimeDependentGBM(GeometricBrownianMotion):
         r2 = tf.expand_dims(u_hat[..., 2], -1)
         r_t = r0 + r1 * time_tensor + r2 * time_tensor ** 2
         return r_t
-
 
     def diffusion_onestep(self, time_tensor: tf.Tensor, state_tensor: tf.Tensor, u_hat: tf.Tensor):
         """
@@ -467,7 +451,6 @@ class TimeDependentGBM(GeometricBrownianMotion):
         Then Then return is a tuple of two tensors: (u_curve, u_param)
         u_curve: batch_size + (time_steps, num_curves), u_param = batch_size + (1)
         """
-        # batch_shape = (u_hat.shape[0], u_hat.shape[1], u_hat.shape[2])
         t = tf.reshape(self.t_grid, [1, 1, 1, self.config.sensors, 1])
         B_0 = tf.shape(u_hat)[0]
         B_1 = tf.shape(u_hat)[1]
@@ -480,99 +463,15 @@ class TimeDependentGBM(GeometricBrownianMotion):
         r2 = tf.reshape(u_hat[...,2], [B_0, B_1, B_2, 1, 1])
         r2 = tf.tile(r2, [1, 1, 1, self.config.sensors, 1])
         r_curve = r0 + r1 * t * r2 * t ** 2
-        
         T = self.config.T
         s0 = tf.reshape(u_hat[...,3], [B_0, B_1, B_2, 1, 1])
         s0 = tf.tile(s0, [1, 1, 1, self.config.sensors, 1])
         beta = tf.reshape(u_hat[...,4], [B_0, B_1, B_2, 1, 1])
         beta = tf.tile(beta, [1, 1, 1, self.config.sensors, 1])
         s_curve = s0 * tf.exp(beta * (t - T))
-
         u_curve = tf.concat([r_curve, s_curve], axis=-1)
         u_param = u_hat[..., 4:]
         return u_curve, u_param
-
-
-class CEVModel(ItoProcessDriver):
-    """
-    A subclass of ItoProcess,  yield curve modeled by Nelson and Siegel and local volatility modeled by
-    Cox and Ross we have
-    """
-
-    def __init__(self,
-                 config):
-        super().__init__(config)
-        # self.beta0_range = [0.02, 0.06]
-        # self.beta1_range = [0.02, 0.05]
-        # self.beta2_range = [0.03, 0.05]
-        self.r_range = [0.01, 0.1]
-        self.sigma_range = [0.02, 0.05]
-        self.gamma_range = [0.3, 1.2]
-        self.range_list = [self.r_range, self.sigma_range, self.gamma_range]
-
-    def vol_surf(self, time: tf.Tensor, state: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
-        """
-        time is with same shape as state [batch, sample, dim]
-        param is [batch, 2], sigma=param[:, 3], gamma = param[:, 4]
-        calculate sigma(t, S) = sigma * S ^{(gamma-2)/2}
-        return same shape as state_t [batch, sample, dim]
-        """
-        batch = tf.shape(u_hat)[0]
-        sigma = tf.reshape(u_hat[:, 1], [batch, 1, 1])
-        gamma = tf.reshape(u_hat[:, 2], [batch, 1, 1])
-        vol = sigma * state ** (gamma - 1)
-        return vol
-
-    def diffusion(self, time: tf.Tensor, state: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
-        """
-        Computes the instantaneous diffusion of this stochastic process.
-
-        :param state : tf.Tensor
-            Contains samples from the stochastic process at a specific time.
-            Shape is [samples, self.dimension].
-        :param time : tf.Tensor
-            The current time; a scalar.
-
-        :return diffusion: tf.Tensor
-            The return is essentially a list of instantaneous diffusion matrices
-            for each sampled state input.
-            It is a tensor of shape [samples, self.dimension, self.dimension].
-
-        param_input (B, 1)
-        state (B, M, D)
-        return (B, M, D)
-        """
-        batch = u_hat.shape[0]
-        assert batch == state.shape[0]
-        vol = self.vol_surf(time, state, u_hat)
-        return vol * state
-
-    def drift_onestep(self, time_tensor: tf.Tensor, state_tensor: tf.Tensor, u_hat: tf.Tensor):
-        """
-        all inputs are [batch, sample, T, dim] like
-        what we do is calculate the drift for the whole tensor
-        """
-        rate_tensor = tf.expand_dims(u_hat[..., 0], -1)
-        return rate_tensor * state_tensor
-
-    def diffusion_onestep(self, time_tensor: tf.Tensor, state_tensor: tf.Tensor, u_hat: tf.Tensor):
-        """
-        get \sigma(t,X) with shape (B,M,N,d)
-        in CEV \sigma(t,X) = \sigma * X^(b - 1)
-        """
-        sigma = tf.expand_dims(u_hat[..., 1], -1)
-        gamma = tf.expand_dims(u_hat[..., 2], -1)
-        vol_tensor = sigma * state_tensor ** (gamma - 1)
-        return vol_tensor * state_tensor
-
-    def euler_onestep(self, time_tensor: tf.Tensor, state_tensor: tf.Tensor, dw: tf.Tensor, u_hat: tf.Tensor):
-        # assert self.diffusion(time, x_path, param).shape == dw.shape
-        r = self.drift_onestep(time_tensor, state_tensor, u_hat)
-        v = self.diffusion_onestep(time_tensor, state_tensor, u_hat)
-        state_tensor_after_step = state_tensor + r * state_tensor * self.config.dt + v * state_tensor * dw
-        return state_tensor_after_step
-    
-
 
 class HestonModel(ItoProcessDriver):
     def __init__(self,
@@ -657,13 +556,11 @@ class HestonModel(ItoProcessDriver):
         rho_sv = tf.reshape(u_hat[:,4], [batch, 1, 1, 1])
         rho_sv_mat = tf.tile(rho_sv, [1, samples, self.dim, self.dim])
         rho_sv_diag = tf.linalg.diag(rho_sv_mat[...,0])
-
         #concat block matrixs
         a = tf.concat([cholesky_s, rho_sv_diag], axis=3)
         b = tf.concat([zeros_mat, i_mat], axis=3)
         return tf.concat([a, b], axis=2)
-
-    
+  
     def brownian_motion(self, state: tf.Tensor, u_hat: tf.Tensor):
         dt = self.config.dt
         batch_size = tf.shape(u_hat)[0]
@@ -804,7 +701,6 @@ class HullWhiteModel(ItoProcessDriver):
         u_param = u_hat[..., 3:]
         return u_curve, u_param
 
-    
     def zcp_value(self, time: tf.Tensor, state: tf.Tensor, 
                   u_hat: tf.Tensor, terminal_date: tf.Tensor) -> tf.Tensor:
         """
@@ -825,15 +721,7 @@ class HullWhiteModel(ItoProcessDriver):
         return tf.where(time > terminal_date, 0., p)
 
 
-        
-
-
-
-
-class SVJModel(ItoProcessDriver):
-    def __init__(self,
-                 config):
-        super().__init__(config)
+    
 
         
 
