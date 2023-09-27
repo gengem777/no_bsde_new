@@ -58,7 +58,6 @@ class EuropeanOption(BaseOption):
         """
         self.strike_range = self.config.strike_range
         self.style = self.config.style
-        # self.m_range = [100, 5]
 
     def payoff(self, x: tf.Tensor, param: tf.Tensor, **kwargs):
         """
@@ -375,32 +374,6 @@ class GeometricAsian(EuropeanOption):
         d_1 = d_2 + vol_bar
         A = tf.exp(-r * (T - t))*(G_t ** (t/T) * y_t ** (1 - t/T) * tf.exp(mu_bar + vol_bar**2/2) * dist.cdf(d_1) - K * dist.cdf(d_2))
         return A
-    
-    # def exact_delta(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor):
-    #     """
-    #     In this x has the dimension:
-    #     (B, M, T, d+d) since this ia a concat with markovian variable
-    #     """
-    #     T = self.config.T
-    #     r = tf.expand_dims(u_hat[:, :, :, 0], -1)
-    #     vol = tf.expand_dims(u_hat[:, :, :, 1], -1)
-    #     k = tf.expand_dims(u_hat[:, :, :, 2], -1)
-    #     K = k * self.config.x_init
-    #     y_t = x[...,:self.config.dim]
-    #     G_t = x[...,self.config.dim:]
-    #     with tf.GradientTape(watch_accessed_variables=False) as tape:
-    #         tape.watch(y_t)
-    #         mu_bar = (r - vol**2/2) * (T - t)**2/2/T
-    #         vol_bar = vol/T * tf.math.sqrt((T - t) ** 3/3)
-    #         d_2 = (t/T * tf.math.log(G_t) + (1 - t/T) * tf.math.log(y_t) + mu_bar - tf.math.log(K))/vol_bar
-    #         d_1 = d_2 + vol_bar
-    #         A = tf.exp(-r * (T - t))*(G_t ** (t/T) * y_t ** (1 - t/T) * tf.exp(mu_bar + vol_bar**2/2) * dist.cdf(d_1) - K * dist.cdf(d_2))
-    #         delta = tape.gradient(A, y_t)
-    #     z = vol * y_t * delta
-    #     return z
-
-
-
         
 class BermudanBasketPut(BaseOption):
     def __init__(self, config):
@@ -459,10 +432,9 @@ class InterestRateSwap(BaseOption):
         super(InterestRateSwap, self).__init__(config)
         self.strike_range = self.config.strike_range #the distribution of the fixed coupon rate
         self.leg_dates = self.config.leg_dates #a list with first element $T_0$ as the first 
-        # payment date and last element $T_n$ as the last payment date
         self.fix_rate = 0.01
         self.sde = HullWhiteModel(config)
-        self.notional = 10
+        self.notional = 1.0
 
     @property
     def delta_t(self):
@@ -573,24 +545,17 @@ class InterestRateSwap(BaseOption):
         v = p_t1 - self.fix_rate * p_t2 - (1.0 + self.fix_rate) * p_t3
         return v
     
-    # def payoff_inter(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
-    #     return self.swap_value(t, x, u_hat)
-    
-    # def payoff_at_maturity(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
-    #     return 0.0
     
 class ZeroCouponBond(BaseOption):
     def __init__(self, config):
         super(ZeroCouponBond, self).__init__(config)
         self.strike_range = self.config.strike_range #the distribution of the fixed coupon rate
         self.leg_dates = self.config.leg_dates #a list with first element $T_0$ as the first 
-        # payment date and last element $T_n$ as the last payment date
         self.terminal_date = self.config.T
         self.sde = HullWhiteModel(config)
         self.fix_rate = 0.05
     
     def payoff(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
-        # return 1.0
         p_12 = self.sde.zcp_value(1.0, x[:,:,-1,:], u_hat[:,:,-1,:], 2.0)
         return 1.0 - (1.0 + self.fix_rate) * p_12
     
