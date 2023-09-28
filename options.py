@@ -9,14 +9,22 @@ dist = tfd.Normal(loc=0., scale=1.)
 
 @dataclass
 class BaseOption:
+    r"""
+    This class give methods corresponded to a certain derivative product.
+    The certain product is developed in child classes. For each class, we have following method:
+    payoff: This function dipicts the payoff of each product.
+    exact_price: This function give the analytical solution of the product, which serves as benchmark
+    sample_parameters: this method sample the parameter related to the product. 
+                    For example, strike price is somewhat needs to be sampled.
+    """
     def __init__(self, config):
         self.config = config.eqn_config
         self.val_config = config.val_config
         self.strike_range = self.config.strike_range
-        self.exer_dates = [0] + self.config.exercise_date
-        self.steps = self.config.time_steps
+        self.exer_dates = [0] + self.config.exercise_date # a list of early exercise dates, [0, 1] for European
+        self.steps = self.config.time_steps 
         self.time_steps_one_year = self.config.time_steps_one_year
-        self.exer_index = [int(num) for num in [k * self.time_steps_one_year for k in self.exer_dates]]
+        self.exer_index = [int(num) for num in [k * self.time_steps_one_year for k in self.exer_dates]] # the list of index of the tensor of time stamp
 
     def payoff(self, x: tf.Tensor, u_hat: tf.Tensor, **kwargs):
         raise NotImplementedError
@@ -59,7 +67,9 @@ class EuropeanOption(BaseOption):
         self.style = self.config.style
 
     def payoff(self, x: tf.Tensor, param: tf.Tensor, **kwargs):
-        """
+        r"""
+        The payoff function is \max{S_T - K, 0} where:
+          K is strike price which is included into u_hat
         Parameters
         ----------
         x: tf.Tensor
@@ -149,7 +159,9 @@ class EuropeanSwap(EuropeanOption):
         self.strike = 0.05 #we assume all products have a unified strike
 
     def payoff(self, x: tf.Tensor, param: tf.Tensor, **kwargs):
-        """
+        r"""
+        The payoff function is S_T - K where:
+          K is forward price which is predetermined which is included into u_hat
         Parameters
         ----------
         x: tf.Tensor
@@ -183,7 +195,10 @@ class EuropeanBasketOption(EuropeanOption):
         super(EuropeanBasketOption, self).__init__(config)
     
     def payoff(self, x: tf.Tensor, u_hat: tf.Tensor, **kwargs):
-        """
+        r"""
+        The payoff function is \max{G_T - K, 0} where:
+          K is strike price which is included into u_hat
+          G_T is the geometric average of the basket at terminal time T.
         Parameters
         ----------
         x: tf.Tensor
@@ -266,6 +281,22 @@ class LookbackOption(EuropeanOption):
         return markov
 
     def payoff(self, x: tf.Tensor, u_hat: tf.Tensor):
+        r"""
+        The payoff function is \max{S_T - m_T, 0} where:
+          m_T is floating minimum at time T.
+        Parameters
+        ----------
+        x: tf.Tensor
+            Asset price path. Tensor of shape (batch_size, sample_size, time_steps, 2 * d)
+            where x[:,:,:,1:] denotes the markovian variable m_t
+        param: tf.Tensor
+            The parameter vectors of brunch net input and we do not have strike in this product.
+        Returns
+        -------
+        payoff: tf.Tensor
+            lookback option payoff. Tensor of shape (batch_size, sample_size, 1)
+            when self.config.dim = 1, this reduced to 1-d vanilla call payoff
+        """
         temp = tf.reduce_mean(x[:, :, -1, :self.config.dim], axis=-1, keepdims=True) # (B, M, 1)
         float_min = tf.math.reduce_min(x[:, :, :, :self.config.dim], axis=2, keepdims=True) # (B, M, 1, d)
         temp_min = tf.reduce_mean(float_min, axis=-1) # (B,M,1)
@@ -291,14 +322,14 @@ class LookbackOption(EuropeanOption):
         return y_t
 
 class GeometricAsian(EuropeanOption):
+    r"""
+    multidimensional Geomatric Asian option
+    Parameters
+    ----------
+    K: float or torch.tensor
+        Strike. Id K is a tensor, it needs to have shape (batch_size)
+    """
     def __init__(self, config):
-        """
-        multidimensional Geomatric Asian option
-        Parameters
-        ----------
-        K: float or torch.tensor
-            Strike. Id K is a tensor, it needs to have shape (batch_size)
-        """
         super(GeometricAsian, self).__init__(config)
     
     def markovian_var(self, x: tf.Tensor):
@@ -320,7 +351,9 @@ class GeometricAsian(EuropeanOption):
         return geo_average
    
     def payoff(self, x_arg: tf.Tensor, param: tf.Tensor):
-        """
+        r"""
+        The payoff function of multidimensional Geomatric Asian option is \max{A_T - K, 0} where:
+          A_T is geometric average on the path of the asset at time T.
         Parameters
         ----------
         x: tf.Tensor
