@@ -102,30 +102,6 @@ class EuropeanOption(BaseOption):
         d1 = (tf.math.log(x / K) + (r + vol ** 2 / 2) * (T - t)) / (vol * tf.math.sqrt(T - t) + 0.000001)
         d2 = d1 - vol * tf.math.sqrt(T - t)
         return x * dist.cdf(d1) - K * tf.exp(-r * (T - t)) * dist.cdf(d2)
-        
-    
-    def exact_delta(self, t: tf.Tensor, x: tf.Tensor, params: tf.Tensor):
-        T = self.config.T
-        r = tf.expand_dims(params[:, :, :, 0], -1)
-        vol = tf.expand_dims(params[:, :, :, 1], -1)
-        k = tf.expand_dims(params[:, :, :, -1], -1)
-        K = k * self.config.x_init
-        d1 = (tf.math.log(x / K) + (r + vol ** 2 / 2) * (T - t)) / (vol * tf.math.sqrt(T - t) + 0.000001)
-        delta =  x * dist.cdf(d1) * vol 
-        return delta
-
-    def sample_parameters(self, N=100, training=True):  # N is the time of batch size
-        if training:
-            strike_range = self.strike_range
-            num_params = int(N * self.config.batch_size)
-            m = tf.math.maximum(tf.random.uniform([num_params, 1], strike_range[0], strike_range[1]), strike_range[0] * 0.05)
-            return m
-        else:
-            strike_range = self.val_config.strike_range
-            num_params = int(N * self.val_config.batch_size)
-            m = tf.math.maximum(tf.random.uniform([num_params, 1], strike_range[0], strike_range[1]), strike_range[0] * 0.08)
-            return m
-
 
 class TimeEuropean(EuropeanOption):
     def __init__(self, config):
@@ -145,7 +121,6 @@ class TimeEuropean(EuropeanOption):
         s0 = tf.expand_dims(u_hat[:, :, :, 3], -1)
         beta = tf.expand_dims(u_hat[:, :, :, 4], -1)
         vol2 = s0/2/beta * (1.0 - tf.exp(2*beta*(t - T))) / ((T-t) + 0.000001)
-        vol = tf.expand_dims(u_hat[:, :, :, 3], -1)
         K = tf.expand_dims(u_hat[:, :, :, -1], -1)
         d1 = (tf.math.log(x / K) + (r + vol2/ 2) * (T - t)) / (tf.math.sqrt(vol2 * (T-t)))
         d2 = d1 - (tf.math.sqrt(vol2 * (T-t)))
@@ -405,6 +380,9 @@ class InterestRateSwap(BaseOption):
 
     @property
     def delta_t(self):
+        r"""
+        This gives the \Delta T
+        """
         return self.leg_dates[1] - self.leg_dates[0]
 
     def reset_dates(self, leg_dates: list):
@@ -413,10 +391,16 @@ class InterestRateSwap(BaseOption):
 
     @property
     def float_start_dates(self):
+        """
+        this gives [T_0, ..., T_{M-1}]
+        """
         return self.leg_dates[:-1]
     
     @property
     def float_end_dates(self):
+        """
+        this gives [T_1, ..., T_{M}]
+        """
         return self.leg_dates[1:]
     
     def fix_legs(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
@@ -463,18 +447,40 @@ class InterestRateSwap(BaseOption):
         return self.notional * tf.reduce_sum(fix_legs - float_legs, axis=-1, keepdims=True) # (B, M, 1)
     
     def payoff_inter(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        r"""
+        This gives the value of a swaption which swap for 2 times at expiry date. 
+        It is written as the following form:
+         v = 1 - K * P(1, 2) - (1 + K) * P(1, 3)
+        x: [B, M, 1] must corresponded to the time t_s
+        u_hat: [B, M, 1]
+        return the value v: [B, M, 1]
+        """
         p_12 = self.zcp(1.0, x[:,:,-1,:], u_hat[:,:,-1,:], 2.0)
         p_13 = self.zcp(1.0, x[:,:,-1,:], u_hat[:,:,-1,:], 3.0)
         return 1.0 - self.fix_rate * p_12 - (1.0 + self.fix_rate) * p_13
     
     def payoff_at_maturity(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        r"""
+        This gives the value of a swaption which swap for 1 times at expiry date. 
+        It is written as the following form:
+         v = 1 - (1 + K) * P(2, 3)
+        x: [B, M, 1] must corresponded to the time t_s
+        u_hat: [B, M, 1]
+        return the value v: [B, M, 1]
+        """
         p_23 = self.zcp(2.0, x[:,:,-1,:], u_hat[:,:,-1,:], 3.0)
         return 1.0 - (1.0 + self.fix_rate) * p_23
     
     def zcp(self, t_s: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor, t_e: tf.Tensor) -> tf.Tensor:
-        """
+        r"""
+        zcp is the abbreviation of zero_coupon_bond. It is written as the following form:
+         P(t_s, t_e) = A(t_s, t_e) * \exp{-B(t_s, t_e) * r_{t_s}} where function A and B are functions of t_e - t_s
+         with \kappa, \theta, \sigma as parameters.
+        t_e: a float scalar or a [B, M, 1] tensor, which represents the bond start time
         x: [B, M, 1] must corresponded to the time t_s
         u_hat: [B, M, 1]
+        t_e: a float scalar or a [B, M, 1] tensor, which represents the bond end time
+        return the value of zero coupon bond P(t_s, t_e): [B, M, 1]
         """
         kappa = tf.expand_dims(u_hat[..., 0], axis=-1)
         theta = tf.expand_dims(u_hat[..., 1], axis=-1)
@@ -486,10 +492,13 @@ class InterestRateSwap(BaseOption):
         return p_se
 
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
-        """
+        r"""
+        This yield the analytical value of the swap which will be swaped for twice:
+         v_t = p(t, 1) - K * p(t, 2) - (1.0 + K) * p(t, 3)
         t: [B, M, N, 1]
         x: [B, M, N, 1]
         u_hat: [B, M, N, 4]
+        return: v: [B, M, N, 1]
         """
         kappa = tf.expand_dims(u_hat[..., 0], axis=-1)
         theta = tf.expand_dims(u_hat[..., 1], axis=-1)

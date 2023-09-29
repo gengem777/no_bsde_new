@@ -237,7 +237,8 @@ class ItoProcessDriver(ABC):
 class GeometricBrownianMotion(ItoProcessDriver):
     """
     A subclass of ItoProcess, MertonJumpDiffusionProcess under Q measure, mainly for testing.
-    This class implements a multivariate geometric Brownian motion process
+    This class implements a multivariate geometric Brownian motion process:
+    d S_t = r S_t dt + \sigma S_t dW_t
     with with Merton jump diffusion
 
     the parameter is a batch of parameter sampled from a distribution
@@ -341,6 +342,10 @@ class GeometricBrownianMotion(ItoProcessDriver):
 
 
 class TimeDependentGBM(GeometricBrownianMotion):
+    r"""
+    This class implenent the time dependent GBM:
+    d S_t = r(t) S_t dt + \sigma(t) S_t dW_t
+    """
     def __init__(self,
                  config):
         super().__init__(config)
@@ -474,6 +479,12 @@ class TimeDependentGBM(GeometricBrownianMotion):
         return u_curve, u_param
 
 class HestonModel(ItoProcessDriver):
+    r"""
+    The Heston model is as follow:
+     d S_t &= r S_t dt + \sqrt{v_t} S_t dW^S_t \\
+     d v_t &= k(b - v_t) dt + vol * dW^v_t
+    where dW^S_t * dW^v_t = \rho dt
+    """
     def __init__(self,
                  config):
         super().__init__(config)
@@ -624,6 +635,13 @@ class HestonModel(ItoProcessDriver):
 
 
 class HullWhiteModel(ItoProcessDriver):
+    r"""
+    This class implement the one factor Hull-White model. The model is:
+    d r_t = k(\theta(t) - r_t) dt + \sigma dW_t
+    where \theta_t is consistent with the initial zero coupon curve.
+    In this class, we simplify the model to the flatten initial forward rate curve and then we have:
+    f(0, t) = r_0 = \theta(t) which is a constant.
+    """
     def __init__(self,
                  config):
         super().__init__(config)
@@ -703,8 +721,11 @@ class HullWhiteModel(ItoProcessDriver):
 
     def zcp_value(self, time: tf.Tensor, state: tf.Tensor, 
                   u_hat: tf.Tensor, terminal_date: tf.Tensor) -> tf.Tensor:
-        """
-        evaluate the zero coupon bond value at time t with maturity T and state r_t
+        r"""
+        evaluate the zero coupon bond value at time t with maturity T and state r_t.
+        It is written as the following form:
+         P(t, T) = A(t, T) * \exp{-B(t, T) * r_{t}} where function A and B are functions of T-t
+         with \kappa, \theta, \sigma as parameters.
         time: tensor of t: [B, M, 1]
         state: tensor of r_t [B, M, d] d=1 usually
         u_hat: tensor of kappa, theta, sigma [B, M, 4] 
