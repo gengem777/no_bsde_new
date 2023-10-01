@@ -42,8 +42,6 @@ class ItoProcessDriver(ABC):
         """
         batch_size = self.get_batch_size(u_hat)
         dimension = self.config.dim
-        # samples = self.config.sample_size
-        # if dimension == 1:
         dist = tfp.distributions.TruncatedNormal(loc=self.x_init,
                                                         scale=self.x_init * 0.2,
                                                         low=self.x_init* 0.05,
@@ -57,11 +55,6 @@ class ItoProcessDriver(ABC):
         elif self.initial_mode == 'partial_fixed':
             state = tf.reshape(dist.sample(batch_size), [batch_size, 1, 1])
             state = tf.tile(state, [1, samples, dimension])
-
-        # else:
-        #     dist = tfp.distributions.Dirichlet([self.initial_value] * dimension)
-        #     state = dist.sample([batch_size, samples]) * tf.cast(dimension, dtype=tf.float32)
-
         return state
     
     
@@ -154,14 +147,11 @@ class ItoProcessDriver(ABC):
         :return (state, time) : (tf.Tensor, tf.Tensor)
             If this Ito process is X(t), the return value is (X(t+dt), dBt, St_*YdNt).
         """
-        # TODO: high dim BM with cov matrix needed to be elaborated
-
         dt = self.config.dt
         noise = self.brownian_motion(state, u_hat)
         drift = self.drift(time, state, u_hat)
         diffusion = self.diffusion(time, state, u_hat)
         increment = drift * dt + diffusion * noise
-        # jump_diffusion = self.jump_diffusion(state, time)
         return state + increment, noise
     
     def sde_simulation(self, u_hat: tf.Tensor, samples: int):
@@ -258,7 +248,6 @@ class GeometricBrownianMotion(ItoProcessDriver):
         self.val_range_list = [self.val_config.r_range, self.val_config.s_range]
         if self.config.dim != 1:
             self.rho_range = self.config.rho_range
-            #if not self.config.iid:
             self.range_list.append(self.rho_range)
             self.val_range_list.append(self.val_config.rho_range)
 
@@ -271,7 +260,6 @@ class GeometricBrownianMotion(ItoProcessDriver):
             Shape is [samples, self.dimension].
         :param time : tf.Tensor
             The current time; a scalar.
-
         :return diffusion: tf.Tensor
             The return is essentially a list of instantaneous diffusion matrices
             for each sampled state input.
@@ -567,7 +555,6 @@ class HestonModel(ItoProcessDriver):
         rho_sv = tf.reshape(u_hat[:,4], [batch, 1, 1, 1])
         rho_sv_mat = tf.tile(rho_sv, [1, samples, self.dim, self.dim])
         rho_sv_diag = tf.linalg.diag(rho_sv_mat[...,0])
-        #concat block matrixs
         a = tf.concat([cholesky_s, rho_sv_diag], axis=3)
         b = tf.concat([zeros_mat, i_mat], axis=3)
         return tf.concat([a, b], axis=2)

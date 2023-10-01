@@ -91,8 +91,12 @@ class EuropeanOption(BaseOption):
             return tf.nn.relu(K - temp)
 
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, params: tf.Tensor):
-        """
-        Implement the BS formula
+        r"""
+        Implement the BS formula:
+		u\left(t, S_t; (r, \sigma, \kappa)\right)=S_t N\left( d_1\right) -  \kappa S_0 e^{-\tilde{r}(T - t)}N\left( d_2\right),
+	    where 
+		d_1 = \frac{\log\left(\frac{S_t}{ \kappa S_0}\right)+\left(\tilde{r} + \frac{\tilde{\sigma}^2}{2}\right)(T-t)}{\tilde{\sigma}\sqrt{T-t}}, 
+        \quad d_2 = d_1 - \sigma\sqrt{T-t}.
         """
         T = self.config.T
         r = tf.expand_dims(params[:, :, :, 0], -1)
@@ -278,9 +282,21 @@ class LookbackOption(EuropeanOption):
         return temp - temp_min
     
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor):
-        """
+        r"""
         In this x has the dimension:
         (B, M, T, d+d) since this ia a concat with markovian variable
+        The exact formula is:
+        \begin{equation*}
+		u(t, S_t, m_t; (r, \sigma))=S_t N\left(a_1\right)-m_t e^{-\tilde{r}(T-t)} N\left(a_2\right)-S_t 
+        \frac{\tilde{\sigma}^2}{2 \tilde{r}}\left(N\left(-a_1\right)\
+        -e^{-\tilde{r}(T-t)}\left(\frac{m_t}{S_t}\right)^{2 \tilde{r} / \tilde{\sigma}^2} N\left(-a_3\right)\right).
+	    \end{equation*}
+	    where
+	    \begin{equation*}
+		a_1=\frac{\log \left(S_t / m_t\right)+\left(\tilde{r}+\tilde{\sigma}^2 / 2\right)(T-t)}{\tilde{\sigma} \sqrt{T-t}}, 
+        \quad a_2=a_1-\tilde{\sigma} \sqrt{T-t}, 
+        \quad a_3=a_1-\frac{2 \tilde{r}}{\tilde{\sigma}} \sqrt{T-t}.
+	    \end{equation*}
         """
         dim = self.config.dim
         T = self.config.T
@@ -349,9 +365,23 @@ class GeometricAsian(EuropeanOption):
         return tf.nn.relu(geo_mean - K)
 
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor):
-        """
+        r"""
         In this x has the dimension:
-        (B, M, T, d+d) since this ia a concat with markovian variable
+        (B, M, N d+d) since this ia a concat with markovian variable:
+        G_t: [B, M, N, d] the geometric average of the underlying price
+        ===============================================================
+        The exact price formula is:
+        \begin{equation*}
+		u\left(t, S_t, A_t; (r, \sigma, \kappa)\right)=e^{-\tilde{r}(T-t)}\left(A_t^{t / T} S_t^{1-t / T} 
+        e^{\hat{\mu}+\hat{\sigma}^2 / 2} N\left(d_1\right)-\kappa S_0 N\left(d_2\right)\right),
+	    \end{equation*}
+	    where
+	    \begin{align}
+		A_t & =\exp \left\{\frac{1}{t} \int_0^t \log S_s d s\right\}  , \quad \hat{\mu}  =\left(\tilde{r}-\frac{\tilde{\sigma}^2}{2}\right) \frac{1}{2 T}(T-t)^2  , 
+        \quad \hat{\sigma}=\frac{\tilde{\sigma}}{T} \sqrt{\frac{1}{3}(T-t)^3}, \\
+		d_2 & =\frac{(t / T) \log A_t+(1-t / T) \log S_t+\hat{\mu}-\log K}{\tilde{\sigma}}  , 
+        \quad d_1 =d_2+\hat{\sigma} .
+	    \end{align}
         """
         T = self.config.T
         r = tf.expand_dims(u_hat[:, :, :, 0], -1)
@@ -370,6 +400,11 @@ class GeometricAsian(EuropeanOption):
 
 
 class InterestRateSwap(BaseOption):
+    """
+    This class implement the payoff and exact price of swap and swaption.
+    For testing issue, we just implement the simpliest version, 
+    where swap just happen twice for three years.
+    """
     def __init__(self, config):
         super(InterestRateSwap, self).__init__(config)
         self.strike_range = self.config.strike_range #the distribution of the fixed coupon rate
@@ -532,6 +567,10 @@ class ZeroCouponBond(BaseOption):
         self.fix_rate = 0.05
     
     def payoff(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        r"""
+        The price formula is:
+        v = 1 - (1 + K) * P(1, 2)
+        """
         p_12 = self.sde.zcp_value(1.0, x[:,:,-1,:], u_hat[:,:,-1,:], 2.0)
         return 1.0 - (1.0 + self.fix_rate) * p_12
     
@@ -540,6 +579,8 @@ class ZeroCouponBond(BaseOption):
         t: [B, M, N, 1]
         x: [B, M, N, 1]
         u_hat: [B, M, N, 4]
+        The price formula is:
+        v = p(t, 1) - (1 + K) * P(t, 2)
         """
         terminal_date = self.config.T
         kappa = tf.expand_dims(u_hat[..., 0], axis=-1)
