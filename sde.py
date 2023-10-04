@@ -38,7 +38,13 @@ class ItoProcessDriver(ABC):
 
     def initial_sampler(self, u_hat: tf.Tensor, samples: int) -> tf.Tensor:
         """
-        Initial sampling of the asset price
+        Initial sampling of the asset price:
+        In all SDE related classes, we denote:
+          batch_size as B,
+          sample_size for per input function as M,
+          time step for the tensor as N,
+          dimension of the state variable as d.
+        return: float tensor with shape [B, M, d]
         """
         batch_size = self.get_batch_size(u_hat)
         dimension = self.config.dim
@@ -59,12 +65,11 @@ class ItoProcessDriver(ABC):
     
     
     def drift(self, time: tf.Tensor, state: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
-        """
-        Computes the drift of this stochastic process.
+        r"""
+        Computes the drift \mu(t, X_t) of this stochastic process.
         operator setting
         mu: (batch_size, 1)
-        state: (batch_size, path_size, dim)
-        mu * state on a batch
+        param state: (batch_size, path_size, dim)
         return: batch_size, path_size, dim)
         """
         batch = tf.shape(u_hat)[0]
@@ -78,7 +83,7 @@ class ItoProcessDriver(ABC):
     @abstractmethod
     def diffusion_onestep(self, time_tensor: tf.Tensor, state_tensor: tf.Tensor, u_hat: tf.Tensor):
         r"""
-        get \sigma(t,X) with shape (B,M,N,d) sequence operation
+        get \sigma(t, X_t) with shape (B,M,N,d) sequence operation
         """
         raise NotImplementedError
     
@@ -87,21 +92,30 @@ class ItoProcessDriver(ABC):
         all inputs are [batch, sample, T, dim] like
         what we do is calculate the drift for the whole tensor
         """
-        rate_tensor = tf.expand_dims(u_hat[..., 0], -1)
-        return rate_tensor * state_tensor
+        raise NotImplementedError
     
     def driver_bsde(self, t: tf.Tensor, x: tf.Tensor, y: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
-        t: [B, M, N, 1]
-        x: [B, M, N, d] 
-        y: [B, M, N, 1]
-        u_hat: [B, M, N, 4]
+        this yields the driver term of the BSDE coupled with this SDE
+        param t: [B, M, N, 1]
+        param x: [B, M, N, d] 
+        param y: [B, M, N, 1]
+        param u_hat: [B, M, N, 4]
         """
         raise NotImplementedError
 
     def corr_matrix(self, state: tf.Tensor, u_hat: tf.Tensor):
-        """
-        In base class the corr is just identity matrix
+        r"""
+        In base class the corr is just d x d identity matrix:
+        	\begin{equation*}
+		   \left(\begin{array}{cccc}
+			1 & 0 & \ldots & 0 \\
+			0 & 1 & \ldots & 0 \\
+			\vdots & \vdots & \ddots & 0 \\
+			0 & 0 & 0 & 1
+		\end{array}\right)
+	    \end{equation*}
+        with rhe shape [B, M, d, d]
         """
         batch = tf.shape(u_hat)[0]
         samples = tf.shape(state)[1]
@@ -133,7 +147,6 @@ class ItoProcessDriver(ABC):
     
     def euler_maryama_step(self, time: tf.Tensor, state: tf.Tensor, u_hat: tf.Tensor):
         """
-
         :param state: tf.Tensor
             The current state of the process.
             Shape is [batch, samples, dim].
@@ -276,6 +289,18 @@ class GeometricBrownianMotion(ItoProcessDriver):
         return tf.einsum('...ij,...j->...i', sigma, state)
         
     def corr_matrix(self, state: tf.Tensor, u_hat: tf.Tensor):
+        r"""
+        In this class the corr is j:
+        	\begin{equation*}
+		   \left(\begin{array}{cccc}
+			1 & \rho & \ldots & \rho \\
+			\rho & 1 & \ldots & \rho \\
+			\vdots & \vdots & \ddots & \rho \\
+			\rho & \rho & \rho & 1
+		\end{array}\right)
+	    \end{equation*}
+        with rhe shape [B, M, d, d]
+        """
         batch = state.shape[0]
         samples = state.shape[1]
         if not self.dim == 1:
@@ -298,10 +323,11 @@ class GeometricBrownianMotion(ItoProcessDriver):
 
     def driver_bsde(self, t: tf.Tensor, x: tf.Tensor, y: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
-        t: [B, M, N, 1]
-        x: [B, M, N, d] 
-        y: [B, M, N, 1]
-        u_hat: [B, M, N, 4]
+        this yields the driver term of the BSDE coupled with this SDE
+        param t: [B, M, N, 1]
+        param x: [B, M, N, d] 
+        param y: [B, M, N, 1]
+        param u_hat: [B, M, N, 4]
         """
         r = u_hat[:, :, :, 0:1] # (B, M, 1)
         return -r * y
@@ -401,6 +427,10 @@ class TimeDependentGBM(GeometricBrownianMotion):
         return tf.einsum('...ij,...j->...i', sigma, state)
     
     def drift_onestep(self, time_tensor: tf.Tensor, state_tensor: tf.Tensor, u_hat: tf.Tensor):
+        """
+        get r(t,X) with shape (B,M,N,d)
+        in TGBM r(t,X) = r_0 + r_1 * t + r_2 * t^2
+        """
         r0 = tf.expand_dims(u_hat[..., 0], -1)
         r1 = tf.expand_dims(u_hat[..., 1], -1)
         r2 = tf.expand_dims(u_hat[..., 2], -1)
@@ -408,9 +438,9 @@ class TimeDependentGBM(GeometricBrownianMotion):
         return r_t
 
     def diffusion_onestep(self, time_tensor: tf.Tensor, state_tensor: tf.Tensor, u_hat: tf.Tensor):
-        """
+        r"""
         get \sigma(t,X) with shape (B,M,N,d)
-        in GBM \sigma(t,X) = \sigma * X
+        in GBM \sigma(t,X) = \sigma_0 * \exp{-\beta * (T - t)}
         """
         T = self.config.T
         s_0 = tf.expand_dims(u_hat[..., 3], -1)
@@ -532,6 +562,11 @@ class HestonModel(ItoProcessDriver):
         return tf.concat([asset_diffusion, vol_diffusion], axis=-1)
     
     def corr_matrix_1d(self, state: tf.Tensor, u_hat: tf.Tensor):
+        r"""
+        When it is 1d case, the matrix is simply [[1, \rho], [\rho, 1]]
+        \rho is the correlation coefficient between asset and volatility.
+        return: float tensor with shape [B, M, 2, 2]
+        """
         batch = state.shape[0]
         samples = state.shape[1]
         actual_dim = state.shape[2]  
@@ -543,6 +578,20 @@ class HestonModel(ItoProcessDriver):
         return corr
     
     def cholesky_matrix_nd(self, state: tf.Tensor, u_hat: tf.Tensor):
+        r"""
+        For nd Heston model, we just calculate the matrix which is the cholesky decomposition of
+        \begin{equation*}
+		\Sigma=\left(\begin{array}{cc}
+			\Sigma_S & \Sigma_{S V} \\
+			\Sigma_{S V}^{\top} & I_d
+		\end{array}\right)
+	    \end{equation*}
+        Then the matrix has three parts:
+        1.The left top part is the Cholesky of the submatrix which is corresponded to the asset prices;
+        2.The right top part is the Cholesky of the submatrix which is corresponded to each asset and its volatility;
+        3.The right bottom part is the diagnal matrix whic is the vol of vol of each stochastic volatility.
+        return: the float tensor with shape [B, M, d, d]
+        """
         batch = state.shape[0]
         samples = state.shape[1]
         rho_s = tf.reshape(u_hat[:,5], [batch, 1, 1, 1])
