@@ -8,7 +8,16 @@ class BaseBSDESolver(tf.keras.Model):
     """
     This is the class to construct the tain step of the BSDE loss function, the data is generated from three
     external classes: the sde class which yield the data of input parameters. the option class which yields the
-    input function data and give the payoff function and exact option price.
+    input function data and give the payoff function and exact option price. In this docstring, we give global notations:
+    B: batch size of functions
+    M: number of paths of a single set of functions and parameters
+    N: steps of the asset path
+    d: number of assets
+    The notation will be used in all methods is illustrated as:
+    args:
+       t: tf.float.Tensor time tensor with shape [B, M, N, 1]
+       x: state tensor with shape [B, M, N, d], [B, M, N, 2d] under SV model, [B, M, N, 3d] under SV model for path dependent product
+       u_hat: parameter related to input functions with shape [B, M, N, k], k is the number of parameters
     """
     def __init__(self, sde, option, config):
         super(BaseBSDESolver, self).__init__()
@@ -16,13 +25,13 @@ class BaseBSDESolver(tf.keras.Model):
         self.net_config = config.net_config
         self.option = option
         self.sde = sde
-        self.dim = self.eqn_config.dim
-        self.branch_layers = self.net_config.branch_layers
-        self.trunk_layers = self.net_config.trunk_layers
-        self.filters = self.net_config.filters
-        self.strides = self.net_config.strides
-        self.pi_layers = self.net_config.pi_layers
-        self.activation = None
+        self.dim = self.eqn_config.dim # dimension of assets
+        self.branch_layers = self.net_config.branch_layers # a list: neurons of each layer in branch network
+        self.trunk_layers = self.net_config.trunk_layers # a list: neurons of each layer in trunk network
+        self.filters = self.net_config.filters # filters when the kernel operator is CNN
+        self.strides = self.net_config.strides # strides when the kernel operator is CNN
+        self.pi_layers = self.net_config.pi_layers # a list: neurons of each layer in permutation invariant network
+        self.activation = None # activation function of network
         if self.net_config.pi == "true":
             if self.net_config.kernel_type == "dense":
                 self.no_net = DeepKernelONetwithPI(branch_layer=self.branch_layers, 
@@ -31,7 +40,7 @@ class BaseBSDESolver(tf.keras.Model):
                                                     num_assets=self.dim, 
                                                     dense=True, 
                                                     num_outputs=6,
-                                                    activation=self.activation)
+                                                    activation=self.activation) # DeepONet with kernel operator be dense operator
             else:                                 
                 self.no_net = DeepKernelONetwithPI(branch_layer=self.branch_layers, 
                                                     trunk_layer=self.trunk_layers, 
@@ -41,12 +50,12 @@ class BaseBSDESolver(tf.keras.Model):
                                                     num_outputs=6,
                                                     activation=self.activation,
                                                     filters=self.filters, 
-                                                    strides=self.strides)
+                                                    strides=self.strides) # DeepONet with kernel operator be CNN
         else:
             if  self.net_config.kernel_type == "no":
                 self.no_net = DeepONet(branch_layer=self.branch_layers, 
                                        trunk_layer=self.trunk_layers,
-                                       activation = self.activation)
+                                       activation = self.activation) # DeepONet without kernel operator
             else:
                 self.no_net = DeepKernelONetwithoutPI(branch_layer=self.branch_layers, 
                                                         trunk_layer=self.trunk_layers, 
@@ -54,24 +63,39 @@ class BaseBSDESolver(tf.keras.Model):
                                                         num_outputs=6,
                                                         activation=self.activation,
                                                         filters=self.filters, 
-                                                        strides=self.strides)
-        self.time_horizon = self.eqn_config.T
-        self.batch_size = self.eqn_config.batch_size
-        self.samples = self.eqn_config.sample_size
-        self.dt = self.eqn_config.dt
-        self.time_steps = self.eqn_config.time_steps
+                                                        strides=self.strides) # DeepONet without pi layers
+        self.time_horizon = self.eqn_config.T # the time horizon $T$ of the problem which is fixed
+        self.batch_size = self.eqn_config.batch_size # the batch size of input functions
+        self.samples = self.eqn_config.sample_size # the number of paths sampled on each input functions set
+        self.dt = self.eqn_config.dt # time step size $\Delta t$
+        self.time_steps = self.eqn_config.time_steps # number of time steps $N = T/\Delta t$
         time_stamp = tf.range(0, self.time_horizon, self.dt)
         time_stamp = tf.reshape(time_stamp, [1, 1, self.time_steps, 1])
-        self.time_stamp = tf.tile(time_stamp, [self.batch_size, self.samples, 1, 1])
-        self.alpha = self.net_config.alpha
+        self.time_stamp = tf.tile(time_stamp, [self.batch_size, self.samples, 1, 1]) # time tensor of the problem
+        self.alpha = self.net_config.alpha # penalty of the interior loss
 
     def net_forward(self, inputs: Tuple[tf.Tensor]) -> tf.Tensor:
-        t, x, u = inputs
+        r"""
+        The forward process is discussed under two different circumstance：
+        when the no_net is the instance of DeepONet, then we just need to input the three tuple (t, x, u):
+            t: time tensor with shape [B, M, N, 1]
+            x: state tensor with shape [B, M, N, d], [B, M, N, 2d] under SV model, [B, M, N, 3d] under SV model for path dependent product
+            u: parameter related to input functions with shape [B, M, N, k], k is the number of parameters
+            return: the out put function value with shape [B, M, N, 1]
+        when the no_net is not the instance of DeepONet, then the function values and kernel operaton will be made with the method split_uhat() 
+        and the output is a two tuple: u_c, u_p, then:
+            t: time tensor with shape [B, M, N, 1]
+            x: state tensor with shape [B, M, N, d], [B, M, N, 2d] under SV model, [B, M, N, 3d] under SV model for path dependent product
+            u_c: function embedding tensor [B, M, N, k_1]
+            u_p: other parameters tensor [B, M, N, k_2]
+            return: the out put function value with shape [B, M, N, 1]
+        """
+        t, x, u_hat = inputs
         if isinstance(self.no_net, DeepONet):
-            y = self.no_net((t, x, u))
+            y = self.no_net((t, x, u_hat))
         # print(t.shape, x.shape, u.shape)
         else:
-            u_c, u_p = self.sde.split_uhat(u)
+            u_c, u_p = self.sde.split_uhat(u_hat)
             # print(u_c.shape, u_p.shape)
             y = self.no_net((t, x, u_c, u_p))
         return y
@@ -83,13 +107,22 @@ class BaseBSDESolver(tf.keras.Model):
     def train_step(self, inputs: Tuple[tf.Tensor]) -> dict:
         raise NotImplementedError
 
-    def drift_bsde(self, t: tf.Tensor, x: tf.Tensor, y: tf.Tensor, param: tf.Tensor) -> tf.Tensor:  # get h function
+    def drift_bsde(self, t: tf.Tensor, x: tf.Tensor, y: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor: 
+        """
+        the driver term of the BSDE, which is determined by the SDE
+        """
         raise NotImplementedError
 
-    def diffusion_bsde(self, t: tf.Tensor, x: tf.Tensor, grad: tf.Tensor, dw: tf.Tensor, param: tf.Tensor) -> tf.Tensor:
+    def diffusion_bsde(self, t: tf.Tensor, x: tf.Tensor, grad: tf.Tensor, dw: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        """
+        the diffusion erm of the BSDE, which is determined by the SDE
+        """
         raise NotImplementedError
 
-    def payoff_func(self, x: tf.Tensor, param: tf.Tensor) -> tf.Tensor:
+    def payoff_func(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        """
+        The payoff function of the time horizon and paths based on the given time tensor and state tensor
+        """
         raise NotImplementedError
 
 
@@ -238,6 +271,9 @@ class EuropeanSolver(MarkovianSolver):
         self.train_round = 0
 
     def net_target_forward(self, inputs: Tuple[tf.Tensor]) -> tf.Tensor:
+        """
+        Same forward propagation as net_forward() but this is not trainable
+        """
         t, x, u = inputs
         if isinstance(self.no_net_target, DeepONet):
             y = self.no_net_target((t, x, u))
@@ -248,7 +284,8 @@ class EuropeanSolver(MarkovianSolver):
     
     def payoff_func(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
-        terminal payoff
+        terminal payoff of each subproblem and when the traiing round is not zero,
+        the terminal payoff is the maximum of early exercise and continuation value given by target network
         """
         t_last = tf.expand_dims(t[:,:,-1,:], axis=2)
         x_last = tf.expand_dims(x[:,:,-1,:], axis=2)
@@ -269,6 +306,7 @@ class FixIncomeEuropeanSolver(EuropeanSolver):
     def payoff_func(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
         terminal payoff for each sub time-interval
+        the terminal payoff is the maximum of early exercise and continuation value given by target network
         """
         t_last = tf.expand_dims(t[:,:,-1,:], axis=2) # (B, M, 1, 1)
         x_last = tf.expand_dims(x[:,:,-1,:], axis=2) # (B, M, 1, 1)
