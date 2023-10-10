@@ -91,7 +91,7 @@ class BaseBSDESolver(tf.keras.Model):
             return: the out put function value with shape [B, M, N, 1]
         """
         t, x, u_hat = inputs
-        if isinstance(self.no_net, DeepONet):
+        if type(self.no_net) == DeepONet:
             y = self.no_net((t, x, u_hat))
         # print(t.shape, x.shape, u.shape)
         else:
@@ -275,7 +275,7 @@ class EuropeanSolver(MarkovianSolver):
         Same forward propagation as net_forward() but this is not trainable
         """
         t, x, u = inputs
-        if isinstance(self.no_net_target, DeepONet):
+        if type(self.no_net_target) == DeepONet:
             y = self.no_net_target((t, x, u))
         else:
             u_c, u_p = self.sde.split_uhat(u)

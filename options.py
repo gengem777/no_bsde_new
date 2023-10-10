@@ -569,10 +569,9 @@ class ZeroCouponBond(BaseOption):
     def payoff(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         r"""
         The price formula is:
-        v = 1 - (1 + K) * P(1, 2)
+        v = 1 
         """
-        p_12 = self.sde.zcp_value(1.0, x[:,:,-1,:], u_hat[:,:,-1,:], 2.0)
-        return 1.0 - (1.0 + self.fix_rate) * p_12
+        return 1.0 
     
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
@@ -580,7 +579,7 @@ class ZeroCouponBond(BaseOption):
         x: [B, M, N, 1]
         u_hat: [B, M, N, 4]
         The price formula is:
-        v = p(t, 1) - (1 + K) * P(t, 2)
+        v = p(t, 1)
         """
         terminal_date = self.config.T
         kappa = tf.expand_dims(u_hat[..., 0], axis=-1)
@@ -590,12 +589,7 @@ class ZeroCouponBond(BaseOption):
         A = tf.exp((B - terminal_date + t)*(kappa**2 * theta - sigma**2/2)/kappa**2 +\
                      (sigma*B)**2/(4*kappa))
         p_t1 = A * tf.exp(-B * tf.reduce_sum(x, axis=-1, keepdims=True))
-
-        B_ = (1 - tf.exp(-kappa * (2.0 - t)))/ kappa
-        A_ = tf.exp((B_ - 2.0 + t)*(kappa**2 * theta - sigma**2/2)/kappa**2 +\
-                     (sigma*B_)**2/(4*kappa))
-        p_t2 = A_ * tf.exp(-B_ * tf.reduce_sum(x, axis=-1, keepdims=True))
-        v = p_t1 - (1 + self.fix_rate) * p_t2
+        v = p_t1
         return v 
 
 

@@ -1,14 +1,8 @@
 import json
 import munch
-import time
-import os
-
-import numpy as np
 import tensorflow as tf
 import sde as eqn
 import options as opts
-import solvers as sls
-from trainer import BSDETrainer, BermudanTrainer
 from data_generators import DiffusionModelGenerator
 
 
@@ -21,7 +15,7 @@ def create_dataset(sde_name: str, option_name: str, dim: int=10, num_of_batches:
         raise ValueError(f"please input right sde_name in {sde_list},\
                           option_name in {option_list} and dim in {dim_list}")
     else:
-        json_path = f'./config/{sde_name}_{option_name}_{dim}.json'
+        json_path = f'./configs/{sde_name}_{option_name}_{dim}.json'
     with open(json_path) as json_data_file:
         config = json.load(json_data_file)
     

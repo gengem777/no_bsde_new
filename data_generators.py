@@ -1,9 +1,9 @@
 import numpy as np
 import tensorflow as tf
-from options import EuropeanOption, GeometricAsian, LookbackOption, EuropeanBasketOption, EuropeanSwap, TimeEuropean, TimeEuropeanBasketOption, BermudanBasketPut, InterestRateSwap, ZeroCouponBond
+from options import EuropeanOption, GeometricAsian, LookbackOption, EuropeanBasketOption, EuropeanSwap, TimeEuropean, TimeEuropeanBasketOption, InterestRateSwap, ZeroCouponBond
 import math
 
-european_list = [EuropeanOption, EuropeanBasketOption, EuropeanSwap, TimeEuropean, TimeEuropeanBasketOption, BermudanBasketPut, InterestRateSwap, ZeroCouponBond]
+european_list = [EuropeanOption, EuropeanBasketOption, EuropeanSwap, TimeEuropean, TimeEuropeanBasketOption, InterestRateSwap, ZeroCouponBond]
 class BaseGenerator(tf.keras.utils.Sequence):
     """ Create batches of random points for the network training. """
 
