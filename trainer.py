@@ -69,11 +69,23 @@ class EarlyExerciseSolver:
         assert len(self.no_nets) == len(self.exercise_index) - 1
     
     def slice_dataset(self, dataset: tf.data.Dataset, idx: int):
-        """
-        t (None, M, 100, 1)
-        x (None, M, 100, 1)
-        dw (None, M, 99, 1)
-        u (None, M, 100, 3+1)
+        r"""
+        In this method, we split the dataset based on the index of early exercise dates:
+
+        For example, if the global dataset has the following shapes:
+        t: (None, M, 100, 1)
+        x: (None, M, 100, 1)
+        dw: (None, M, 99, 1)
+        u: (None, M, 100, 3+1)
+
+        Then we get the index of time step with idx_now = self.exercise_index[idx-1] and suppose we know that there are 20 time steps between two consecutive dates.
+        then we just attain the dataset with shape:
+        t_slice: (None, M, 20, 1)
+        x_slice: (None, M, 20, 1)
+        dw_slice: (None, M, 19, 1)
+        u_slice: (None, M, 20, 3+1)
+        
+        return: the four tuple (t_slice, x_slice, dw_slice, u_slice)
         """
         if len(self.option.exer_dates) == 2:
             sub_dataset = dataset
@@ -99,6 +111,9 @@ class EarlyExerciseSolver:
 
 
     def train(self, data: tf.data.Dataset, epochs: int, checkpoint_path: str):
+        """
+        The total training pipeline and we finally attain the no_nets in each sub-time interval.
+        """
         # construct data set
         history = LossHistory()
         learning_rate = self.net_config.lr
@@ -113,73 +128,18 @@ class EarlyExerciseSolver:
             # construct data set from the original dataset
             path = checkpoint_path + f"{idx}"
             print(f"=============begin {idx} th interval============")
-            dataset = self.slice_dataset(data, idx)
+            dataset = self.slice_dataset(data, idx) # slice the dataset from the total dataset based on the time interval between two consecutive exercise dates
             if idx == len(self.exercise_index)-1:                
                 self.european_solver.fit(x=dataset, epochs=epochs, callbacks=[history])
             else:
                 self.european_solver.fit(x=dataset, epochs=epochs, callbacks=[history])
-            self.european_solver.no_net.save_weights(path)
-            self.european_solver.no_net_target.load_weights(path)  
-            self.european_solver.step_to_next_round()      
+            self.european_solver.no_net.save_weights(path) # save the weights in the  idx-th path
+            self.european_solver.no_net_target.load_weights(path)  # load the weights in the  idx-th path that means we initialize the weight for next task with the previous weight
+            self.european_solver.step_to_next_round() # move ahead the index of task
             print(f"===============end {idx} th interval============")
-        self.european_solver.reset_round()
+        self.european_solver.reset_round() # reset the index of task to zero
         print("---end---")
 
     def load_weights_nets(self, checkpoint_path: str):
         for idx in range(len(self.no_nets)):
             self.no_nets[idx].load_weights(checkpoint_path + f"{idx + 1}")
-
-
-    # def eval_nets(self, dataset: tf.data.Dataset):
-    #     # slice a batch
-    #     ys = []
-    #     for element in dataset.take(1):
-    #         t, x, _, u = element
-    #     for idx in range(len(self.no_nets)):
-    #         idx_now = self.exercise_index[idx]
-    #         if idx == len(self.exercise_index)-1:
-    #             t_s = t[:, :, idx_now:, :]
-    #             x_s = x[:, :, idx_now:, :]
-    #             u_s = u[:, :, idx_now:, :]
-    #         else:
-    #             idx_fut = self.exercise_index[idx+1]
-    #             t_s = t[:, :, idx_now:idx_fut, :]
-    #             x_s = x[:, :, idx_now:idx_fut, :]
-    #             u_s = u[:, :, idx_now:idx_fut, :]
-    #         u_c, u_p = self.european_solver.sde.split_uhat(u_s)
-    #         y_s = self.no_nets[0]((t_s, x_s, u_c, u_p))
-    #         ys.append(y_s)
-    #     y = tf.concat(ys, axis=2)
-        
-    #     y_exact = self.option.exact_price(t, x, u)
-    #     return y, y_exact, t, x, u
-    
-    # def price(self, x, u):
-    #     x = tf.convert_to_tensor(x, dtype=tf.float32)
-    #     t = tf.zeros([1, 1, 1, 1])
-    #     x = tf.reshape(x, [1, 1, 1, -1])
-    #     u = tf.reshape(u, [1, 1, 1, -1])
-    #     if isinstance(self.no_nets[0], DeepONet):
-    #         y_s = self.no_nets[0]((t, x, u))
-    #     else:
-    #         u_c, u_p = self.european_solver.sde.split_uhat(u)
-    #         y_s = self.no_nets[0]((t, x, u_c, u_p))
-    #     return y_s.numpy()
-    
-    # def price_swap(self, t, x, u):
-    #     """
-    #     This method can be used only if self.option is an instance of InterestRateSwap
-    #     t: [B, M, 1]
-    #     x: [B, M, 1]
-    #     u: [B, M, K]
-    #     e.g. t = [[[0.0]]], x = [[[0.02]]], u = [[[0.5, 0.4, 0.01, 0.011]]]
-    #     return [[[the value]]]
-    #     """
-    #     t_, x_, u_ = tf.expand_dims(t, axis=-1), tf.expand_dims(x, axis=-1), tf.expand_dims(u, axis=2)
-    #     if isinstance(self.no_nets[0], DeepONet):
-    #         y_s = self.no_nets[0]((t_, x_, u_))
-    #     else:
-    #         u_c, u_p = self.european_solver.sde.split_uhat(u_)
-    #         y_s = self.no_nets[0]((t_, x_, u_c, u_p))
-    #     # y_exact = self.option.swap_value(t, x, u)
-    #     return y_s
