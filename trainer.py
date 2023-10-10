@@ -3,24 +3,18 @@ from solvers import EuropeanSolver, FixIncomeEuropeanSolver
 from function_space import DeepONet, DeepKernelONetwithPI, DeepKernelONetwithoutPI
 from options import BaseOption
 from sde import ItoProcessDriver, HullWhiteModel
-class LossHistory(tf.keras.callbacks.Callback):
-    def on_train_begin(self, logs={}):
-        self.losses = []
-    def on_batch_end(self, batch, logs={}):
-        self.losses.append(logs.get('loss'))
 
-
-class EarlyExerciseSolver:
+class EarlyExerciseTrainer:
     """
     In this class, we initialize a list of no_net models and train each one
-    recursively with the class EuropeanSolver.
+    recursively with the class EuropeanSolver. Then this class gives a pipeline of training process
     """
     def __init__(self, sde: ItoProcessDriver, option: BaseOption, config):
-        if isinstance(sde, HullWhiteModel):
+        self.sde = sde
+        if isinstance(self.sde, HullWhiteModel):
             self.european_solver = FixIncomeEuropeanSolver(sde, option, config)
         else:
             self.european_solver = EuropeanSolver(sde, option, config)
-        self.sde = sde
         self.option = option
         self.eqn_config = config.eqn_config
         self.net_config = config.net_config
@@ -31,7 +25,7 @@ class EarlyExerciseSolver:
         self.strides = self.net_config.strides
         self.pi_layers = self.net_config.pi_layers
         self.exercise_date = self.eqn_config.exercise_date
-        self.exercise_index = self.option.exer_index #[40, 60] <=> [0, 1] len=2 (for index) is the time index for early exercise
+        self.exercise_index = self.option.exer_index # [40, 60] <=> [0, 1] len=2 (for index) is the time index for early exercise
         if self.net_config.pi == "true":
             if self.net_config.kernel_type == "dense":
                 self.no_nets = [DeepKernelONetwithPI(branch_layer=self.branch_layers, 
@@ -40,7 +34,7 @@ class EarlyExerciseSolver:
                                                     num_assets=self.dim, 
                                                     dense=True, 
                                                     num_outputs=6)
-                                                    for _ in range (len(self.exercise_index) - 1)]
+                                                    for _ in range (len(self.exercise_index) - 1)] # initialize a list of DeepKernelONetwithPI models with dense operator
             else:                                 
                 self.no_nets = [DeepKernelONetwithPI(branch_layer=self.branch_layers, 
                                                     trunk_layer=self.trunk_layers, 
@@ -50,14 +44,14 @@ class EarlyExerciseSolver:
                                                     num_outputs=6,
                                                     filters=self.filters, 
                                                     strides=self.strides)
-                                                    for _ in range (len(self.exercise_index) - 1)]
+                                                    for _ in range (len(self.exercise_index) - 1)] # initialize a list of DeepKernelONetwithPI models with CNN operator
         else:
             if  self.net_config.kernel_type == "no":
                 self.no_nets = [DeepONet(branch_layer=self.branch_layers, 
                                         trunk_layer=self.trunk_layers,
                                         activation = "tanh",
                                         )
-                                        for _ in range (len(self.exercise_index) - 1)]
+                                        for _ in range (len(self.exercise_index) - 1)] # initialize a list of DeepONet models
             else:
                 self.no_nets = [DeepKernelONetwithoutPI(branch_layer=self.branch_layers, 
                                                         trunk_layer=self.trunk_layers, 
@@ -65,8 +59,8 @@ class EarlyExerciseSolver:
                                                         num_outputs=6,
                                                         filters=self.filters, 
                                                         strides=self.strides)
-                                                        for _ in range (len(self.exercise_index) - 1)]
-        assert len(self.no_nets) == len(self.exercise_index) - 1
+                                                        for _ in range (len(self.exercise_index) - 1)] # initialize a list of DeepKernelONetwithoutPI models
+        assert len(self.no_nets) == len(self.exercise_index) - 1 # check whether the length of no_nets list satisfy the number of sub time intervals
     
     def slice_dataset(self, dataset: tf.data.Dataset, idx: int):
         r"""
@@ -90,7 +84,7 @@ class EarlyExerciseSolver:
         if len(self.option.exer_dates) == 2:
             sub_dataset = dataset
         else:
-            idx_now = self.exercise_index[idx-1]
+            idx_now = self.exercise_index[idx-1] # the index of the time at the beginning of the interval
             if idx == len(self.exercise_index)-1:
                 def slice_fn(t, x, dw, u):
                     t_slice = t[:, :, idx_now:, :]
@@ -99,7 +93,7 @@ class EarlyExerciseSolver:
                     u_slice = u[:, :, idx_now:, :]
                     return t_slice, x_slice, dw_slice, u_slice
             else:
-                idx_fut = self.exercise_index[idx]
+                idx_fut = self.exercise_index[idx] # the index of the time at the end of the interval
                 def slice_fn(t, x, dw, u):
                     t_slice = t[:, :, idx_now:idx_fut+1, :]
                     x_slice = x[:, :, idx_now:idx_fut+1, :]
@@ -114,25 +108,20 @@ class EarlyExerciseSolver:
         """
         The total training pipeline and we finally attain the no_nets in each sub-time interval.
         """
-        # construct data set
-        history = LossHistory()
-        learning_rate = self.net_config.lr
+        # learning_rate = self.net_config.lr
         lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
-            initial_learning_rate=learning_rate,
+            initial_learning_rate=self.net_config.lr,
             decay_steps=200,
             decay_rate=0.9
         )
-        optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule, epsilon=1e-6)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule, epsilon=1e-6) # set the optimizer of the European solver
         self.european_solver.compile(optimizer=optimizer)
         for idx in reversed(range(1, len(self.exercise_index))):
             # construct data set from the original dataset
             path = checkpoint_path + f"{idx}"
             print(f"=============begin {idx} th interval============")
-            dataset = self.slice_dataset(data, idx) # slice the dataset from the total dataset based on the time interval between two consecutive exercise dates
-            if idx == len(self.exercise_index)-1:                
-                self.european_solver.fit(x=dataset, epochs=epochs, callbacks=[history])
-            else:
-                self.european_solver.fit(x=dataset, epochs=epochs, callbacks=[history])
+            dataset = self.slice_dataset(data, idx) # slice the dataset from the total dataset based on the time interval between two consecutive exercise dates               
+            self.european_solver.fit(x=dataset, epochs=epochs) # training the operator in the corresponded idx-th sub-interval
             self.european_solver.no_net.save_weights(path) # save the weights in the  idx-th path
             self.european_solver.no_net_target.load_weights(path)  # load the weights in the  idx-th path that means we initialize the weight for next task with the previous weight
             self.european_solver.step_to_next_round() # move ahead the index of task
