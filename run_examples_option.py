@@ -3,7 +3,7 @@ import json
 import munch
 import sde as eqn
 import options as opts
-from trainer import EarlyExerciseTrainer
+from earlyexercise_pricers import EarlyExercisePricer
 from generate_data import create_dataset
 
 # load config
@@ -44,9 +44,9 @@ dataset = tf.data.experimental.load(dataset_path, element_spec=(
 dataset = dataset.batch(config.eqn_config.batch_size)
 checkpoint_path = f'./checkpoint2/GBM_bermudan/{sde_name}_{option_name}_{dim}'
 #initialize the solver and train
-solver = EarlyExerciseTrainer(sde, option, config)
+pricer = EarlyExercisePricer(sde, option, config)
 # tf.config.run_functions_eagerly(True)
-solver.train(dataset, 10, checkpoint_path)
+pricer.train(dataset, 10, checkpoint_path)
 
 
 

@@ -1,19 +1,11 @@
 import tensorflow as tf
-from solvers import MarkovianSolver
-from data_generators import DiffusionModelGenerator
-from typing import List, Tuple
-from sde import ItoProcessDriver
+from pricers import MarkovianPricer
 from generate_data import create_dataset
 import json
 import munch
-import time
-import os
-
-import numpy as np
 import sde as eqn
 import options as opts
-import solvers as sls
-from trainer import EarlyExerciseSolver
+
 
 # load config
 sde_list = ["GBM", "TGBM", "SV", "HW", "SVJ"]
@@ -52,17 +44,17 @@ dataset = tf.data.experimental.load(dataset_path, element_spec=(
 dataset = dataset.batch(config.eqn_config.batch_size)
 checkpoint_path = f'./checkpoint2/HW_Bond/{sde_name}_{option_name}_{dim}_{time_steps}'
 #initialize the solver and train
-solver = MarkovianSolver(sde, option, config)
+pricer = MarkovianPricer(sde, option, config)
 lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
     initial_learning_rate=config.net_config.lr,
     decay_steps=2000,
     decay_rate=0.9
 )
 optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule, epsilon=1e-6)
-solver.compile(optimizer=optimizer)
+pricer.compile(optimizer=optimizer)
 # tf.config.run_functions_eagerly(True)
-solver.fit(x=dataset, epochs=10)
+pricer.fit(x=dataset, epochs=10)
 t = tf.constant([[[[0.0]]]])
 x = tf.constant([[[[0.05]]]])
 u = tf.constant([[[[0.4, 0.05, 0.03, 0.011]]]])
-print(solver.no_net((t, x, u)).numpy())
+print(pricer((t, x, u)).numpy())
