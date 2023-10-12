@@ -16,15 +16,15 @@ class EarlyExercisePricer:
         else:
             self.european_solver = EuropeanSolver(sde, option, config)
         self.option = option
-        self.eqn_config = config.eqn_config
-        self.net_config = config.net_config
-        self.dim = self.eqn_config.dim
-        self.branch_layers = self.net_config.branch_layers
-        self.trunk_layers = self.net_config.trunk_layers
-        self.filters = self.net_config.filters
-        self.strides = self.net_config.strides
-        self.pi_layers = self.net_config.pi_layers
-        self.exercise_date = self.eqn_config.exercise_date
+        self.eqn_config = config.eqn_config # config of the model
+        self.net_config = config.net_config # config of the network
+        self.dim = self.eqn_config.dim # num of assets
+        self.branch_layers = self.net_config.branch_layers # the list of branch layer sizes
+        self.trunk_layers = self.net_config.trunk_layers # the list of trunk layer sizes
+        self.filters = self.net_config.filters # the num of filters if the kernel operator is CNN
+        self.strides = self.net_config.strides # the num of strides if the kernel operator is CNN
+        self.pi_layers = self.net_config.pi_layers # the list of layer sizes of permutation invariant layer.
+        self.exercise_date = self.eqn_config.exercise_date # the list of early exercise dates
         self.exercise_index = self.option.exer_index # [40, 60] <=> [0, 1] len=2 (for index) is the time index for early exercise
         if self.net_config.pi == "true":
             if self.net_config.kernel_type == "dense":

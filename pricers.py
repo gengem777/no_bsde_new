@@ -5,8 +5,55 @@ from sde import HestonModel
 from typing import Tuple
 
 class BaseBSDEPricer(tf.keras.Model):
-    """
-    This is the class to construct the tain step of the BSDE loss function, the data is generated from three
+    r"""
+    1. The configs of the pricer is given by a json file: The config of the model is illustrated as follows:
+       eqn_config: the config corresponded to model and training, which includes:
+        -sde_name: the name of class name of sde
+        -option_name: string: the name of class name of option
+        -solver_name: string: the name of class name of pricer
+        -exercise_date: string: the list of early exercise dates
+        -style: boolean: call or put
+        -T: tf.float.Tensor: the time horizon of the problem
+        -dt: tf.float.Tensor: the step size of Monte Carlo simulation
+        -dim: int: the number of assets 
+        -time_steps: int: number of time steps of the whole time horizon
+        -time_steps_one_year: number of time steps per year
+        -strike_range: List[2], the distribution of moneyness of the product, List[0] gives the mean, \
+            List[1] gives the standard deviation
+        -r_range: List[2], the uniform distribution of the risk free rate
+        -s_range: List[2], the uniform distribution of the volatility rate
+        -rho_range: List[2], the uniform distribution of the correlation between assets
+        -x_init: tf.float.Tensor, the initial state value
+        -vol_init: tf.float.Tensor, the initial stochastic volatility value
+        -batch_size: int, batch size of input functions and parameters
+        -sample_size: int, number of paths of a single set of functions and parameters
+        -sensors: int, input size of the deepOnet
+        -initial_mode: three choices: "fixed"-simulate sde from a fixed initial value; 
+            "partial fixed"-simulate sde from a fixed initial value just for each set of functions; 
+            "random"-simulate sde from a randomed initial value; 
+
+       net_config: the config corresponded to the keras.model of the neural network, which includes:
+        -pi: a list of layer sizes of the permutation invariant network;
+        -branch_layers: a list of layer sizes of the branch network;
+        -trunk_layers: a list of layer sizes of the trunk network;
+        -pi_layers:  a list of layer sizes of permutation invariant layer.
+        -kernel_type: two choices: "dense"-dense operator as in paper of deepOnet; "conv"-CNN kernel
+        -filters: the num of filters if the kernel operator is CNN
+        -strides: the num of strides if the kernel operator is CNN
+        -lr: the learning rate
+        -epochs: the epoch
+        -alpha: the penalty of the interior loss
+
+       val_config: the config for validation, which includes:
+        -r_range: List[2], the uniform distribution of the risk free rate
+        -s_range: List[2], the uniform distribution of the volatility rate
+        -rho_range: List[2], the uniform distribution of the correlation between assets
+        -x_init: tf.float.Tensor, the initial state value
+        -vol_init: tf.float.Tensor, the initial stochastic volatility value
+        -batch_size: int, batch size of input functions and parameters
+        -sample_size: int, number of paths of a single set of functions and parameters
+
+    2. This is the class to construct the tain step of the BSDE loss function and inference the value of price with certain time, state and coefficients, the data is generated from three
     external classes: the sde class which yield the data of input parameters. the option class which yields the
     input function data and give the payoff function and exact option price. In this docstring, we give global notations:
     B: batch size of functions
@@ -137,7 +184,12 @@ class MarkovianPricer(BaseBSDEPricer):
         super(MarkovianPricer, self).__init__(sde, option, config)
 
     def loss_fn(self, data: Tuple[tf.Tensor], training=None) -> Tuple[tf.Tensor]:
-        """
+        r"""
+        In this method, f is the no_net output value of t, x, u on the time horizon from 0 to T.
+        f_now: the no_net output value of t, x, u on the time horizon from 0 to T-1, with shape [B, M, T-1, 1];
+        f_pls: the no_net output value of t, x, u on the time horizon from 1 to T, with shape [B, M, T-1, 1];
+        other variables is calculated based on these two variables
+        ----------------------------------------
         :param t: time B x M x (T-1) x 1
         :param x: state B x M x (T-1) x D
         :param  u: B x K ->(repeat) B x M x (T-1) x K
@@ -225,7 +277,7 @@ class MarkovianPricer(BaseBSDEPricer):
 class EuropeanSolver(MarkovianPricer):
     def __init__(self, sde, option, config):
         super(EuropeanSolver, self).__init__(sde, option, config)
-        self.train_round = 0 # this gives the index of the round of training
+        self.num_of_time_intervals_for_early_exercise = 0 # this gives the index of the round of training
         if self.net_config.pi == "true":
             if self.net_config.kernel_type == "dense":
                 self.no_net_target = DeepKernelONetwithPI(branch_layer=self.branch_layers, 
@@ -261,10 +313,10 @@ class EuropeanSolver(MarkovianPricer):
         self.no_net_target.trainable = False
         
     def step_to_next_round(self):
-        self.train_round += 1
+        self.num_of_time_intervals_for_early_exercise+= 1
     
     def reset_round(self):
-        self.train_round = 0
+        self.num_of_time_intervals_for_early_exercise = 0
 
     def net_target_forward(self, inputs: Tuple[tf.Tensor]) -> tf.Tensor:
         """
@@ -286,7 +338,7 @@ class EuropeanSolver(MarkovianPricer):
         t_last = tf.expand_dims(t[:,:,-1,:], axis=2)
         x_last = tf.expand_dims(x[:,:,-1,:], axis=2)
         u_last = tf.expand_dims(u_hat[:,:,-1,:], axis=2)
-        if self.train_round != 0:
+        if self.num_of_time_intervals_for_early_exercise != 0:
             cont_value = tf.squeeze(self.net_target_forward((t_last, x_last, u_last)), axis=2)
             early_payoff = self.option.payoff(x, u_hat)
             payoff = tf.maximum(early_payoff, cont_value)
@@ -311,7 +363,7 @@ class FixIncomeEuropeanSolver(EuropeanSolver):
             payoff = self.option.payoff_inter(t[:,:,-1,:], x[:,:,-1,:], u_hat[:,:,-1,:])
         
         else:
-            if self.train_round != 0:
+            if self.num_of_time_intervals_for_early_exercise != 0:
                 cont_value = tf.squeeze(self.net_target_forward((t_last, x_last, u_last)), axis=2) # (B, M, 1)
                 early_payoff = self.option.payoff_inter(t[:,:,-1,:], x[:,:,-1,:], u_hat[:,:,-1,:])
                 payoff = tf.maximum(early_payoff, cont_value)

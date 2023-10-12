@@ -4,10 +4,8 @@ import tensorflow_probability as tfp
 
 tfd = tfp.distributions
 dist = tfd.Normal(loc=0., scale=1.)
-from scipy.stats import norm
 from typing import Optional
 
-N = norm.cdf
 class DenseNet(tf.keras.Model):
     """
     The feed forward neural network
