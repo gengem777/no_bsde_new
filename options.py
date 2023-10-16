@@ -217,6 +217,7 @@ class EuropeanBasketOption(EuropeanOption):
 class  TimeEuropeanBasketOption(EuropeanBasketOption):
     def __init__(self, config):
         super(TimeEuropeanBasketOption, self).__init__(config)
+        self.epsilon = 1e-6
     
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor):
         d = self.config.dim
@@ -226,10 +227,10 @@ class  TimeEuropeanBasketOption(EuropeanBasketOption):
         r2 = tf.expand_dims(u_hat[:, :, :, 2], -1)
         r_T = r0 * T + r1 * T ** 2 /2 + r2 * T ** 3/3 
         r_t = r0 * t + r1 * t ** 2 /2 + r2 * t ** 3/3 
-        r = (r_T - r_t)/((T - t) + 0.000001)
+        r = (r_T - r_t)/((T - t) + self.epsilon)
         s0 = tf.expand_dims(u_hat[:, :, :, 3], -1)
         beta = tf.expand_dims(u_hat[:, :, :, 4], -1)
-        vol2 = s0/2/beta * (1.0 - tf.exp(2*beta*(t - T))) / ((T-t) + 0.000001)
+        vol2 = s0/2/beta * (1.0 - tf.exp(2*beta*(t - T))) / ((T-t) + self.epsilon)
         rho = tf.expand_dims(u_hat[:, :, :, 2], -1)
         k = tf.expand_dims(u_hat[:, :, :, -1], -1)
         K = k * self.config.x_init
