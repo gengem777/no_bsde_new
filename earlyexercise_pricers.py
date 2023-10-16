@@ -1,5 +1,5 @@
 import tensorflow as tf
-from pricers import EuropeanSolver, FixIncomeEuropeanSolver
+from pricers import EuropeanPricer, FixIncomeEuropeanPricer
 from function_space import DeepONet, DeepKernelONetwithPI, DeepKernelONetwithoutPI
 from options import BaseOption
 from sde import ItoProcessDriver, HullWhiteModel
@@ -12,55 +12,62 @@ class EarlyExercisePricer:
     def __init__(self, sde: ItoProcessDriver, option: BaseOption, config):
         self.sde = sde
         if isinstance(self.sde, HullWhiteModel):
-            self.european_solver = FixIncomeEuropeanSolver(sde, option, config)
+            self.european_solver = FixIncomeEuropeanPricer(sde, option, config)
         else:
-            self.european_solver = EuropeanSolver(sde, option, config)
+            self.european_solver = EuropeanPricer(sde, option, config)
         self.option = option
         self.eqn_config = config.eqn_config # config of the model
         self.net_config = config.net_config # config of the network
         self.dim = self.eqn_config.dim # num of assets
-        self.branch_layers = self.net_config.branch_layers # the list of branch layer sizes
-        self.trunk_layers = self.net_config.trunk_layers # the list of trunk layer sizes
-        self.filters = self.net_config.filters # the num of filters if the kernel operator is CNN
-        self.strides = self.net_config.strides # the num of strides if the kernel operator is CNN
-        self.pi_layers = self.net_config.pi_layers # the list of layer sizes of permutation invariant layer.
+        # self.branch_layers = self.net_config.branch_layers # the list of branch layer sizes
+        # self.trunk_layers = self.net_config.trunk_layers # the list of trunk layer sizes
+        # self.filters = self.net_config.filters # the num of filters if the kernel operator is CNN
+        # self.strides = self.net_config.strides # the num of strides if the kernel operator is CNN
+        # self.pi_layers = self.net_config.pi_layers # the list of layer sizes of permutation invariant layer.
         self.exercise_date = self.eqn_config.exercise_date # the list of early exercise dates
         self.exercise_index = self.option.exer_index # [40, 60] <=> [0, 1] len=2 (for index) is the time index for early exercise
         if self.net_config.pi == "true":
             if self.net_config.kernel_type == "dense":
-                self.no_nets = [DeepKernelONetwithPI(branch_layer=self.branch_layers, 
-                                                    trunk_layer=self.trunk_layers, 
-                                                    pi_layer=self.pi_layers, 
+                self.no_nets = [DeepKernelONetwithPI(branch_layer=self.net_config.branch_layer_sizes, 
+                                                    trunk_layer=self.net_config.trunk_layer_sizes, 
+                                                    pi_layer=self.pi_layer_sizes,  
                                                     num_assets=self.dim, 
                                                     dense=True, 
                                                     num_outputs=6)
                                                     for _ in range (len(self.exercise_index) - 1)] # initialize a list of DeepKernelONetwithPI models with dense operator
             else:                                 
-                self.no_nets = [DeepKernelONetwithPI(branch_layer=self.branch_layers, 
-                                                    trunk_layer=self.trunk_layers, 
-                                                    pi_layer=self.pi_layers, 
+                self.no_nets = [DeepKernelONetwithPI(branch_layer=self.net_config.branch_layer_sizes, 
+                                                    trunk_layer=self.net_config.trunk_layer_sizes, 
+                                                    pi_layer=self.pi_layer_sizes, 
                                                     num_assets=self.dim, 
                                                     dense=False, 
                                                     num_outputs=6,
-                                                    filters=self.filters, 
-                                                    strides=self.strides)
+                                                    filters=self.net_config.num_filters, 
+                                                    strides=self.net_config.num_strides)
                                                     for _ in range (len(self.exercise_index) - 1)] # initialize a list of DeepKernelONetwithPI models with CNN operator
         else:
             if  self.net_config.kernel_type == "no":
-                self.no_nets = [DeepONet(branch_layer=self.branch_layers, 
-                                        trunk_layer=self.trunk_layers,
+                self.no_nets = [DeepONet(branch_layer=self.net_config.branch_layer_sizes, 
+                                        trunk_layer=self.net_config.trunk_layer_sizes,     
                                         activation = "tanh",
                                         )
                                         for _ in range (len(self.exercise_index) - 1)] # initialize a list of DeepONet models
             else:
-                self.no_nets = [DeepKernelONetwithoutPI(branch_layer=self.branch_layers, 
-                                                        trunk_layer=self.trunk_layers, 
+                self.no_nets = [DeepKernelONetwithoutPI(branch_layer=self.net_config.branch_layer_sizes, 
+                                                        trunk_layer=self.net_config.trunk_layer_sizes, 
                                                         dense=True, 
                                                         num_outputs=6,
-                                                        filters=self.filters, 
-                                                        strides=self.strides)
+                                                        filters=self.net_config.num_filters, 
+                                                        strides=self.net_config.num_strides)
                                                         for _ in range (len(self.exercise_index) - 1)] # initialize a list of DeepKernelONetwithoutPI models
         assert len(self.no_nets) == len(self.exercise_index) - 1 # check whether the length of no_nets list satisfy the number of sub time intervals
+        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+            initial_learning_rate=self.net_config.lr,
+            decay_steps=200,
+            decay_rate=0.9
+        )
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule, epsilon=1e-6) # set the optimizer of the European solver
+        self.european_solver.compile(optimizer=self.optimizer)
     
     def slice_dataset(self, dataset: tf.data.Dataset, idx: int):
         r"""
@@ -104,7 +111,7 @@ class EarlyExercisePricer:
         return sub_dataset
 
 
-    def train(self, data: tf.data.Dataset, epochs: int, checkpoint_path: str):
+    def fit(self, data: tf.data.Dataset, epochs: int, checkpoint_path: str):
         """
         The total training pipeline and we finally attain the no_nets in each sub-time interval.
         """

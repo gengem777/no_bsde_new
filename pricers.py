@@ -34,12 +34,12 @@ class BaseBSDEPricer(tf.keras.Model):
 
        net_config: the config corresponded to the keras.model of the neural network, which includes:
         -pi: a list of layer sizes of the permutation invariant network;
-        -branch_layers: a list of layer sizes of the branch network;
-        -trunk_layers: a list of layer sizes of the trunk network;
-        -pi_layers:  a list of layer sizes of permutation invariant layer.
+        -branch_layer_sizes: a list of layer sizes of the branch network;
+        -trunk_layer_sizes: a list of layer sizes of the trunk network;
+        -pi_layer_sizes:  a list of layer sizes of permutation invariant layer.
         -kernel_type: two choices: "dense"-dense operator as in paper of deepOnet; "conv"-CNN kernel
-        -filters: the num of filters if the kernel operator is CNN
-        -strides: the num of strides if the kernel operator is CNN
+        -num_filters: the num of filters if the kernel operator is CNN, this is valid only when kernel_type is "conv"
+        -num_strides: the num of strides if the kernel operator is CNN, this is valid only when kernel_type is "conv"
         -lr: the learning rate
         -epochs: the epoch
         -alpha: the penalty of the interior loss
@@ -73,44 +73,44 @@ class BaseBSDEPricer(tf.keras.Model):
         self.option = option
         self.sde = sde
         self.dim = self.eqn_config.dim # dimension of assets
-        self.branch_layers = self.net_config.branch_layers # a list: neurons of each layer in branch network
-        self.trunk_layers = self.net_config.trunk_layers # a list: neurons of each layer in trunk network
-        self.filters = self.net_config.filters # filters when the kernel operator is CNN
-        self.strides = self.net_config.strides # strides when the kernel operator is CNN
-        self.pi_layers = self.net_config.pi_layers # a list: neurons of each layer in permutation invariant network
+        # self.branch_layers = self.net_config.branch_layer_sizes # a list: neurons of each layer in branch network
+        # self.trunk_layers = self.net_config.trunk_layer_sizes # a list: neurons of each layer in trunk network
+        # self.filters = self.net_config.filters # filters when the kernel operator is CNN
+        # self.strides = self.net_config.strides # strides when the kernel operator is CNN
+        # self.pi_layers = self.net_config.pi_layers # a list: neurons of each layer in permutation invariant network
         self.activation = None # activation function of network
         if self.net_config.pi == "true":
             if self.net_config.kernel_type == "dense":
-                self.no_net = DeepKernelONetwithPI(branch_layer=self.branch_layers, 
-                                                    trunk_layer=self.trunk_layers, 
-                                                    pi_layer=self.pi_layers, 
+                self.no_net = DeepKernelONetwithPI(branch_layer=self.net_config.branch_layer_sizes, 
+                                                    trunk_layer=self.net_config.trunk_layer_sizes, 
+                                                    pi_layer=self.pi_layer_sizes, 
                                                     num_assets=self.dim, 
                                                     dense=True, 
                                                     num_outputs=6,
                                                     activation=self.activation) # DeepONet with kernel operator be dense operator
             else:                                 
-                self.no_net = DeepKernelONetwithPI(branch_layer=self.branch_layers, 
-                                                    trunk_layer=self.trunk_layers, 
-                                                    pi_layer=self.pi_layers, 
+                self.no_net = DeepKernelONetwithPI(branch_layer=self.net_config.branch_layer_sizes, 
+                                                    trunk_layer=self.net_config.trunk_layer_sizes, 
+                                                    pi_layer=self.pi_layer_sizes, 
                                                     num_assets=self.dim, 
                                                     dense=False, 
                                                     num_outputs=6,
                                                     activation=self.activation,
-                                                    filters=self.filters, 
-                                                    strides=self.strides) # DeepONet with kernel operator be CNN
+                                                    filters=self.net_config.num_filters, 
+                                                    strides=self.net_config.num_strides) # DeepONet with kernel operator be CNN
         else:
             if  self.net_config.kernel_type == "no":
-                self.no_net = DeepONet(branch_layer=self.branch_layers, 
-                                       trunk_layer=self.trunk_layers,
+                self.no_net = DeepONet(branch_layer=self.net_config.branch_layer_sizes, 
+                                       trunk_layer=self.net_config.trunk_layer_sizes,
                                        activation = self.activation) # DeepONet without kernel operator
             else:
-                self.no_net = DeepKernelONetwithoutPI(branch_layer=self.branch_layers, 
-                                                        trunk_layer=self.trunk_layers, 
+                self.no_net = DeepKernelONetwithoutPI(branch_layer=self.net_config.branch_layer_sizes,  
+                                                        trunk_layer=self.net_config.trunk_layer_sizes,
                                                         dense=True, 
                                                         num_outputs=6,
                                                         activation=self.activation,
-                                                        filters=self.filters, 
-                                                        strides=self.strides) # DeepONet without pi layers
+                                                        filters=self.net_config.num_filters, 
+                                                        strides=self.net_config.num_strides) # DeepONet without pi layers
         self.time_horizon = self.eqn_config.T # the time horizon $T$ of the problem which is fixed
         self.batch_size = self.eqn_config.batch_size # the batch size of input functions
         self.samples = self.eqn_config.sample_size # the number of paths sampled on each input functions set
@@ -288,42 +288,42 @@ class MarkovianPricer(BaseBSDEPricer):
         payoff = self.option.payoff(t, x, u_hat)
         return payoff
 
-class EuropeanSolver(MarkovianPricer):
+class EuropeanPricer(MarkovianPricer):
     def __init__(self, sde, option, config):
-        super(EuropeanSolver, self).__init__(sde, option, config)
+        super(EuropeanPricer, self).__init__(sde, option, config)
         self.num_of_time_intervals_for_early_exercise = 0 # this gives the index of the round of training
         if self.net_config.pi == "true":
             if self.net_config.kernel_type == "dense":
-                self.no_net_target = DeepKernelONetwithPI(branch_layer=self.branch_layers, 
-                                                    trunk_layer=self.trunk_layers, 
-                                                    pi_layer=self.pi_layers, 
+                self.no_net_target = DeepKernelONetwithPI(branch_layer=self.net_config.branch_layer_sizes, 
+                                                    trunk_layer=self.net_config.trunk_layer_sizes, 
+                                                    pi_layer=self.pi_layer_sizes, 
                                                     num_assets=self.dim, 
                                                     dense=True, 
                                                     num_outputs=6,
                                                     activation=self.activation)
             else:                                 
-                self.no_net_target = DeepKernelONetwithPI(branch_layer=self.branch_layers, 
-                                                    trunk_layer=self.trunk_layers, 
-                                                    pi_layer=self.pi_layers, 
+                self.no_net_target = DeepKernelONetwithPI(branch_layer=self.net_config.branch_layer_sizes, 
+                                                    trunk_layer=self.net_config.trunk_layer_sizes, 
+                                                    pi_layer=self.pi_layer_sizes, 
                                                     num_assets=self.dim, 
                                                     dense=False, 
                                                     num_outputs=6,
                                                     activation=self.activation,
-                                                    filters=self.filters, 
-                                                    strides=self.strides)
+                                                    filters=self.net_config.num_filters, 
+                                                    strides=self.net_config.num_strides)
         else:
             if  self.net_config.kernel_type == "no":
-                self.no_net_target = DeepONet(branch_layer=self.branch_layers, 
-                                       trunk_layer=self.trunk_layers,
+                self.no_net_target = DeepONet(branch_layer=self.net_config.branch_layer_sizes, 
+                                       trunk_layer=self.net_config.trunk_layer_sizes,
                                        activation = self.activation)
             else:
-                self.no_net_target = DeepKernelONetwithoutPI(branch_layer=self.branch_layers, 
-                                                        trunk_layer=self.trunk_layers, 
+                self.no_net_target = DeepKernelONetwithoutPI(branch_layer=self.net_config.branch_layer_sizes, 
+                                                        trunk_layer=self.net_config.trunk_layer_sizes, 
                                                         dense=True, 
                                                         num_outputs=6,
                                                         activation=self.activation,
-                                                        filters=self.filters, 
-                                                        strides=self.strides)
+                                                        filters=self.net_config.num_filters, 
+                                                        strides=self.net_config.num_strides)
         self.no_net_target.trainable = False
         
     def step_to_next_round(self):
@@ -361,9 +361,9 @@ class EuropeanSolver(MarkovianPricer):
             cont = self.net_target_forward((t, x, u_hat))
         return payoff 
     
-class FixIncomeEuropeanSolver(EuropeanSolver):
+class FixIncomeEuropeanPricer(EuropeanPricer):
     def __init__(self, sde, option, config):
-        super(FixIncomeEuropeanSolver, self).__init__(sde, option, config)  
+        super(FixIncomeEuropeanPricer, self).__init__(sde, option, config)  
     
     def payoff_func(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """

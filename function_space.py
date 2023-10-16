@@ -38,6 +38,9 @@ class DenseNet(tf.keras.Model):
         return x
 
 class BlackScholesFormula(tf.keras.Model):
+    r"""
+    This class is a model to implement BlackScholes formula
+    """
     def __init__(self, T: tf.Tensor):
         super(BlackScholesFormula, self).__init__()
         self.T = T
@@ -109,7 +112,7 @@ class DeepONetwithPI(DeepONet):
     def __init__(self, branch_layer: List[int], 
                  trunk_layer: List[int], 
                  pi_layer: List[int], 
-                 num_assets: int=5, 
+                 num_assets: int=2, # the default value is 2。
                  activation: Optional[str]=None):
         self.num_assets = num_assets
         super(DeepONetwithPI, self).__init__(branch_layer, trunk_layer, activation)
