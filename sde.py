@@ -698,6 +698,7 @@ class HullWhiteModel(ItoProcessDriver):
         self.sigma_range = self.config.sigma_range
         self.range_list = [self.theta_range, self.kappa_range, self.sigma_range]
         self.val_range_list = [self.val_config.theta_range, self.val_config.kappa_range, self.val_config.sigma_range]
+        self.epsilon = 0.01 
     
     def drift(self, time: tf.Tensor, state: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         r"""
@@ -787,7 +788,7 @@ class HullWhiteModel(ItoProcessDriver):
         A = tf.exp((B - terminal_date + time)*(kappa**2 * theta - sigma**2/2)/kappa**2 +\
                      (sigma*B)**2/(4*kappa))
         p = A * tf.exp(-B * tf.reduce_sum(state, axis=-1, keepdims=True))
-        return tf.where(time > terminal_date, 0., p)
+        return tf.where(time > terminal_date+self.epsilon, 0., p)
 
 
     
