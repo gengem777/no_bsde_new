@@ -413,6 +413,7 @@ class InterestRateSwap(BaseOption):
         self.fix_rate = 0.01
         self.sde = HullWhiteModel(config)
         self.notional = 1.0
+        self.epsilon=1e-3
 
     @property
     def delta_t(self):
@@ -470,7 +471,7 @@ class InterestRateSwap(BaseOption):
         """
         float_leg = self.sde.zcp_value(t, x, u_hat, terminal_date - self.delta_t) - \
             self.sde.zcp_value(t, x, u_hat, terminal_date)
-        return tf.where(t > terminal_date - self.delta_t + 0.001, 0., float_leg)
+        return tf.where(t > terminal_date - self.delta_t + self.epsilon, 0., float_leg)
     
     def swap_value(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
@@ -504,7 +505,7 @@ class InterestRateSwap(BaseOption):
         u_hat: [B, M, 1]
         return the value v: [B, M, 1]
         """
-        p_23 = self.zcp(2.0, x[:,:,-1,:], u_hat[:,:,-1,:], 3.0)
+        p_23 = self.zcp(self.config.leg_dates[1], x[:,:,-1,:], u_hat[:,:,-1,:], self.config.leg_dates[-1])
         return 1.0 - (1.0 + self.fix_rate) * p_23
     
     def zcp(self, t_s: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor, t_e: tf.Tensor) -> tf.Tensor:
@@ -517,6 +518,9 @@ class InterestRateSwap(BaseOption):
         u_hat: [B, M, 1]
         t_e: a float scalar or a [B, M, 1] tensor, which represents the bond end time
         return the value of zero coupon bond P(t_s, t_e): [B, M, 1]
+
+        However this can also enter 4-D tensors, but the dimension of x and u_hat and t_s and t_e (if it is also tensors) 
+        must be consistent!
         """
         kappa = tf.expand_dims(u_hat[..., 0], axis=-1)
         theta = tf.expand_dims(u_hat[..., 1], axis=-1)
@@ -536,25 +540,10 @@ class InterestRateSwap(BaseOption):
         u_hat: [B, M, N, 4]
         return: v: [B, M, N, 1]
         """
-        kappa = tf.expand_dims(u_hat[..., 0], axis=-1)
-        theta = tf.expand_dims(u_hat[..., 1], axis=-1)
-        sigma = tf.expand_dims(u_hat[..., 2], axis=-1)
-        B1 = (1.0 - tf.exp(-kappa * (1.0 - t)))/ kappa
-        A1 = tf.exp((B1 - 1.0 + t)*(kappa**2 * theta - sigma**2/2)/kappa**2 +\
-                     (sigma*B1)**2/(4*kappa))
-        p_t1 = A1* tf.exp(-B1 * tf.reduce_sum(x, axis=-1, keepdims=True))
-
-        B2 = (1.0 - tf.exp(-kappa * (2.0 - t)))/ kappa
-        A2 = tf.exp((B2 - 2.0 + t)*(kappa**2 * theta - sigma**2/2)/kappa**2 +\
-                     (sigma*B2)**2/(4*kappa))
-        p_t2 = A2 * tf.exp(-B2 * tf.reduce_sum(x, axis=-1, keepdims=True))
-
-        B3 = (1.0 - tf.exp(-kappa * (3.0 - t)))/ kappa
-        A3 = tf.exp((B3 - 3.0 + t)*(kappa**2 * theta - sigma**2/2)/kappa**2 +\
-                     (sigma*B3)**2/(4*kappa))
-        p_t3 = A3 * tf.exp(-B3 * tf.reduce_sum(x, axis=-1, keepdims=True))
-
-        v = p_t1 - self.fix_rate * p_t2 - (1.0 + self.fix_rate) * p_t3
+        p_start = self.zcp(t, x, u_hat, self.config.leg_dates[0])
+        p_mid = self.zcp(t, x, u_hat, self.config.leg_dates[1])
+        p_end = self.zcp(t, x, u_hat, self.config.leg_dates[-1])
+        v = p_start - self.fix_rate * p_mid - (1.0 + self.fix_rate) * p_end
         return v
     
     
