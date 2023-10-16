@@ -242,8 +242,11 @@ class GeometricBrownianMotion(ItoProcessDriver):
     A subclass of ItoProcess, MertonJumpDiffusionProcess under Q measure, mainly for testing.
     This class implements a multivariate geometric Brownian motion process:
     d S_t = r S_t dt + \sigma S_t dW_t
-    with with Merton jump diffusion
-
+    
+    The config provide the distribution of:
+        -r_range: List[2], the uniform distribution of the risk free rate
+        -s_range: List[2], the uniform distribution of the volatility rate
+        -rho_range: List[2], the uniform distribution of the correlation between assets, None when dim=1.
     the parameter is a batch of parameter sampled from a distribution
     whose shape is (num_batch, dim_param = 2) \mu and \sigma
     one parameter correspond to num_sample paths
@@ -502,6 +505,12 @@ class HestonModel(ItoProcessDriver):
      d S_t &= r S_t dt + \sqrt{v_t} S_t dW^S_t \\
      d v_t &= k(b - v_t) dt + vol * dW^v_t
     where dW^S_t * dW^v_t = \rho dt
+
+    The config provide the distribution of:
+        -kappa_range: List[2], the uniform distribution of the the mean revert rate;
+        -theta_range: List[2], the uniform distribution of the the mean revert level;
+        -s_range: List[2], the uniform distribution of the volatility of volatility rate;
+        -rho_range: List[2], the uniform distribution of the correlation between assets and stochastic volatilities.
     """
     def __init__(self,
                  config):
@@ -677,6 +686,9 @@ class HullWhiteModel(ItoProcessDriver):
     where \theta_t is consistent with the initial zero coupon curve.
     In this class, we simplify the model to the flatten initial forward rate curve and then we have:
     f(0, t) = r_0 = \theta(t) which is a constant.
+        -kappa_range: List[2], the uniform distribution of the the mean revert rate;
+        -theta_range: List[2], the uniform distribution of the the long term interest rate level (flat curve);
+        -s_range: List[2], the uniform distribution of the volatility rate;
     """
     def __init__(self,
                  config):

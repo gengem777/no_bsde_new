@@ -140,12 +140,21 @@ class BaseBSDEPricer(tf.keras.Model):
         t, x, u_hat = inputs
         if type(self.no_net) == DeepONet:
             y = self.no_net((t, x, u_hat))
-        # print(t.shape, x.shape, u.shape)
         else:
             u_c, u_p = self.sde.split_uhat(u_hat)
-            # print(u_c.shape, u_p.shape)
             y = self.no_net((t, x, u_c, u_p))
         return y
+    
+    def get_gradient(self, inputs: Tuple[tf.Tensor]) -> tf.Tensor:
+        """
+        This calculate the gradient of the network output with respect to the state x
+        """
+        t, x, u_hat = inputs
+        with tf.GradientTape(watch_accessed_variables=False) as tape:
+            tape.watch(x)
+            f = self((t, x, u_hat))
+            grad = tape.gradient(f, x) 
+        return grad
         
     def loss_fn(self, data: Tuple[tf.Tensor], training=None):
         raise NotImplementedError
@@ -189,7 +198,14 @@ class MarkovianPricer(BaseBSDEPricer):
         f_now: the no_net output value of t, x, u on the time horizon from 0 to T-1, with shape [B, M, T-1, 1];
         f_pls: the no_net output value of t, x, u on the time horizon from 1 to T, with shape [B, M, T-1, 1];
         other variables is calculated based on these two variables
-        ----------------------------------------
+        
+        This loss function give the BSDE loss through the time interval [T_0, T_1] and we let T_0 = 0, T-1 = T
+        We first calculate the loss evaluated at each time point and the sum up.
+        For a certain time point t_i, the loss is:
+        l_i(y_i +\sum_{j=i}^N driver_bsde(t_j, X_j, y_j, z_j, u_hat) * dt + z_j * dW_j  - g(T, X_T, u_hat)) ** 2, where:
+        y_i = no_net(t_j, X_j, u_hat) and z_i = sde.diffusion_onestep(t_i, X_i, u_hat) * \nabla y_i
+        Then the tital loss is: \sum_{i=0}^Nl_i.
+
         :param t: time B x M x (T-1) x 1
         :param x: state B x M x (T-1) x D
         :param  u: B x K ->(repeat) B x M x (T-1) x K
@@ -198,35 +214,33 @@ class MarkovianPricer(BaseBSDEPricer):
         t, x, dw, u_hat = data
         steps = self.eqn_config.time_steps
         loss_interior = 0.0
-        u_now = u_hat[:, :, :-1, :]
-        x_now = x[:, :, :-1, :]
-        t_now = t[:, :, :-1, :]
-        with tf.GradientTape(watch_accessed_variables=False) as tape:
-            tape.watch(x)
-            f = self.call((t, x, u_hat))
-            grad = tape.gradient(f, x) 
-        f_now = f[:, :, :-1, :]
-        f_pls = f[:, :, 1:, :]
+        u_before = u_hat[:, :, :-1, :]
+        x_before = x[:, :, :-1, :]
+        t_before = t[:, :, :-1, :]
+        f = self((t, x, u_hat))
+        grad = self.get_gradient((t, x, u_hat))
+        f_before = f[:, :, :-1, :] # f_before is the value tensor corresponded from time steps 0 to N-1
+        f_after = f[:, :, 1:, :] # f_after is the value tensor corresponded from time steps 1 to N
         grad = grad[:,:,:-1,:]
         for n in range(steps-1):
-            V_pls = f_pls[:, :, n:, :]
-            V_now = f_now[:, :, n:, :]
+            V_pls = f_after[:, :, n:, :] # value tensor corresponded from time steps n to N-1
+            V_now = f_before[:, :, n:, :] # value tensor corresponded from time steps n+1 to N
             V_hat = V_now - self.drift_bsde(
-                t_now[:,:, n:,:], 
-                x_now[:,:, n:,:], 
+                t_before[:,:, n:,:], 
+                x_before[:,:, n:,:], 
                 V_now,
-                u_now[:,:, n:,:],
+                u_before[:,:, n:,:],
             ) * self.dt + self.diffusion_bsde(
-                t_now[:,:, n:,:], 
-                x_now[:,:, n:,:], 
+                t_before[:,:, n:,:], 
+                x_before[:,:, n:,:], 
                 grad[:,:, n:,:], 
                 dw[:,:, n:,:], 
-                u_now[:,:, n:,:],
+                u_before[:,:, n:,:],
             ) 
             tele_sum = tf.reduce_sum(V_pls - V_hat, axis=2)
-            loss_interior += tf.reduce_mean(tf.square(tele_sum + self.payoff_func(t, x, u_hat) - f_pls[:, :, -1, :]))
+            loss_interior += tf.reduce_mean(tf.square(tele_sum + self.payoff_func(t, x, u_hat) - f_after[:, :, -1, :]))
         
-        loss_tml = tf.reduce_mean(tf.square(f_pls[:, :, -1, :] - self.payoff_func(t, x, u_hat))) 
+        loss_tml = tf.reduce_mean(tf.square(f_after[:, :, -1, :] - self.payoff_func(t, x, u_hat))) 
         loss = self.alpha * loss_tml + loss_interior
         return loss, loss_interior, loss_tml
 
@@ -254,12 +268,12 @@ class MarkovianPricer(BaseBSDEPricer):
         give: \sigma(t, x) * grad
         for a batch of (t, x, par)
         """
-        if not isinstance(self.sde, HestonModel):
+        if not isinstance(self.sde, HestonModel): # for Heston model, the state is [S, V] so we should truncate the state to just asset
             x = x[...,:self.dim]
             grad = grad[...,:self.dim]
             v_tx = self.sde.diffusion_onestep(t, x[...,:self.dim], u_hat)
         else:
-            v_tx = self.sde.diffusion_onestep(t, x, u_hat)
+            v_tx = self.sde.diffusion_onestep(t, x, u_hat) # else, we do not this truncation
         z = tf.reduce_sum(v_tx * grad * dw, axis=-1, keepdims=True)
         return z
 
@@ -332,7 +346,7 @@ class EuropeanSolver(MarkovianPricer):
     
     def payoff_func(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
-        terminal payoff of each subproblem and when the traiing round is not zero,
+        terminal payoff of each subproblem and when the exercise period is not zero,
         the terminal payoff is the maximum of early exercise and continuation value given by target network
         """
         t_last = tf.expand_dims(t[:,:,-1,:], axis=2)
@@ -345,7 +359,7 @@ class EuropeanSolver(MarkovianPricer):
         else:
             payoff = self.option.payoff(x, u_hat)
             cont = self.net_target_forward((t, x, u_hat))
-        return payoff # (B, M, 1)
+        return payoff 
     
 class FixIncomeEuropeanSolver(EuropeanSolver):
     def __init__(self, sde, option, config):

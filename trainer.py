@@ -61,6 +61,14 @@ class EarlyExerciseTrainer:
                                                         strides=self.strides)
                                                         for _ in range (len(self.exercise_index) - 1)] # initialize a list of DeepKernelONetwithoutPI models
         assert len(self.no_nets) == len(self.exercise_index) - 1 # check whether the length of no_nets list satisfy the number of sub time intervals
+        # learning_rate = self.net_config.lr
+        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+            initial_learning_rate=self.net_config.lr,
+            decay_steps=200,
+            decay_rate=0.9
+        )
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule, epsilon=1e-6) # set the optimizer of the European solver
+        self.european_solver.compile(optimizer=self.optimizer)
     
     def slice_dataset(self, dataset: tf.data.Dataset, idx: int):
         r"""
@@ -104,18 +112,10 @@ class EarlyExerciseTrainer:
         return sub_dataset
 
 
-    def train(self, data: tf.data.Dataset, epochs: int, checkpoint_path: str):
+    def fit(self, data: tf.data.Dataset, epochs: int, checkpoint_path: str):
         """
         The total training pipeline and we finally attain the no_nets in each sub-time interval.
         """
-        # learning_rate = self.net_config.lr
-        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
-            initial_learning_rate=self.net_config.lr,
-            decay_steps=200,
-            decay_rate=0.9
-        )
-        optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule, epsilon=1e-6) # set the optimizer of the European solver
-        self.european_solver.compile(optimizer=optimizer)
         for idx in reversed(range(1, len(self.exercise_index))):
             # construct data set from the original dataset
             path = checkpoint_path + f"{idx}"

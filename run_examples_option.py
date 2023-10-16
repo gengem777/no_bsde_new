@@ -46,7 +46,7 @@ checkpoint_path = f'./checkpoint2/GBM_bermudan/{sde_name}_{option_name}_{dim}'
 #initialize the solver and train
 pricer = EarlyExercisePricer(sde, option, config)
 # tf.config.run_functions_eagerly(True)
-pricer.train(dataset, 10, checkpoint_path)
+pricer.fit(dataset, 1, checkpoint_path)
 
 
 
