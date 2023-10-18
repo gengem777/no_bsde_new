@@ -37,7 +37,9 @@ class BaseBSDEPricer(tf.keras.Model):
         -branch_layer_sizes: a list of layer sizes of the branch network;
         -trunk_layer_sizes: a list of layer sizes of the trunk network;
         -pi_layer_sizes:  a list of layer sizes of permutation invariant layer.
-        -kernel_type: two choices: "dense"-dense operator as in paper of deepOnet; "conv"-CNN kernel
+        -kernel_type: three choices: "dense"-dense operator as in paper of deepOnet; 
+                                     "conv"-CNN kernel
+                                     "no"-directly send parameters of function into the branch network.
         -num_filters: the num of filters if the kernel operator is CNN, this is valid only when kernel_type is "conv"
         -num_strides: the num of strides if the kernel operator is CNN, this is valid only when kernel_type is "conv"
         -lr: the learning rate
@@ -73,11 +75,6 @@ class BaseBSDEPricer(tf.keras.Model):
         self.option = option
         self.sde = sde
         self.dim = self.eqn_config.dim # dimension of assets
-        # self.branch_layers = self.net_config.branch_layer_sizes # a list: neurons of each layer in branch network
-        # self.trunk_layers = self.net_config.trunk_layer_sizes # a list: neurons of each layer in trunk network
-        # self.filters = self.net_config.filters # filters when the kernel operator is CNN
-        # self.strides = self.net_config.strides # strides when the kernel operator is CNN
-        # self.pi_layers = self.net_config.pi_layers # a list: neurons of each layer in permutation invariant network
         self.activation = None # activation function of network
         if self.net_config.pi == "true":
             if self.net_config.kernel_type == "dense":
