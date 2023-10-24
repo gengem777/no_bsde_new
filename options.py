@@ -4,7 +4,7 @@ import tensorflow_probability as tfp
 from sde import HullWhiteModel
 
 tfd = tfp.distributions
-dist = tfd.Normal(loc=0., scale=1.)
+dist = tfd.Normal(loc=0.0, scale=1.0)
 
 
 @dataclass
@@ -14,24 +14,29 @@ class BaseOption:
     The certain product is developed in child classes. For each class, we have following method:
     payoff: This function dipicts the payoff of each product.
     exact_price: This function give the analytical solution of the product, which serves as benchmark
-    sample_parameters: this method sample the parameter related to the product. 
+    sample_parameters: this method sample the parameter related to the product.
                     For example, strike price is somewhat needs to be sampled.
     """
+
     def __init__(self, config):
         self.config = config.eqn_config
         self.val_config = config.val_config
         self.strike_range = self.config.strike_range
-        self.exer_dates = [0] + self.config.exercise_date # a list of early exercise dates, [0, 1] for European
-        self.steps = self.config.time_steps 
+        self.exer_dates = [
+            0
+        ] + self.config.exercise_date  # a list of early exercise dates, [0, 1] for European
+        self.steps = self.config.time_steps
         self.time_steps_one_year = self.config.time_steps_one_year
-        self.exer_index = [int(num) for num in [k * self.time_steps_one_year for k in self.exer_dates]] # the list of index of the tensor of time stamp
+        self.exer_index = [
+            int(num) for num in [k * self.time_steps_one_year for k in self.exer_dates]
+        ]  # the list of index of the tensor of time stamp
 
     def payoff(self, x: tf.Tensor, u_hat: tf.Tensor, **kwargs):
         raise NotImplementedError
 
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor):
         raise NotImplementedError
-    
+
     def expand_batch_inputs_dim(self, par: tf.Tensor):
         """
         input: the parmeter tensor with shape [batch_size, 1]
@@ -40,19 +45,24 @@ class BaseOption:
         par = tf.reshape(par, [self.config.batch_size, 1, 1, 1])
         par = tf.tile(par, [1, self.config.sample_size, self.config.time_steps + 1, 1])
         return par
-    
+
     def sample_parameters(self, N=100, training=True):  # N is the time of batch size
         if training:
             strike_range = self.strike_range
             num_params = int(N * self.config.batch_size)
-            m = tf.math.maximum(tf.random.normal([num_params, 1], strike_range[0], strike_range[1]), strike_range[0] * 0.0001)
+            m = tf.math.maximum(
+                tf.random.normal([num_params, 1], strike_range[0], strike_range[1]),
+                strike_range[0] * 0.0001,
+            )
             return m
         else:
             strike_range = self.val_config.strike_range
             num_params = int(N * self.val_config.batch_size)
-            m = tf.math.maximum(tf.random.normal([num_params, 1], strike_range[0], strike_range[1]), strike_range[0] * 0.0001)
+            m = tf.math.maximum(
+                tf.random.normal([num_params, 1], strike_range[0], strike_range[1]),
+                strike_range[0] * 0.0001,
+            )
             return m
-
 
 
 class EuropeanOption(BaseOption):
@@ -82,8 +92,8 @@ class EuropeanOption(BaseOption):
             basket option payoff. Tensor of shape (batch_size, sample_size, 1)
             when self.config.dim = 1, this reduced to 1-d vanilla call payoff
         """
-        k = tf.expand_dims(param[:, :, 0, -1], axis=-1) # (B, M, 1)
-        temp = tf.reduce_mean(x[:, :, -1, :], axis=-1, keepdims=True) # (B, M, 1)
+        k = tf.expand_dims(param[:, :, 0, -1], axis=-1)  # (B, M, 1)
+        temp = tf.reduce_mean(x[:, :, -1, :], axis=-1, keepdims=True)  # (B, M, 1)
         K = k * self.config.x_init
         if self.style == "call":
             return tf.nn.relu(temp - K)
@@ -93,9 +103,9 @@ class EuropeanOption(BaseOption):
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, params: tf.Tensor):
         r"""
         Implement the BS formula:
-		u\left(t, S_t; (r, \sigma, \kappa)\right)=S_t N\left( d_1\right) -  \kappa S_0 e^{-\tilde{r}(T - t)}N\left( d_2\right),
-	    where 
-		d_1 = \frac{\log\left(\frac{S_t}{ \kappa S_0}\right)+\left(\tilde{r} + \frac{\tilde{\sigma}^2}{2}\right)(T-t)}{\tilde{\sigma}\sqrt{T-t}}, 
+                u\left(t, S_t; (r, \sigma, \kappa)\right)=S_t N\left( d_1\right) -  \kappa S_0 e^{-\tilde{r}(T - t)}N\left( d_2\right),
+            where
+                d_1 = \frac{\log\left(\frac{S_t}{ \kappa S_0}\right)+\left(\tilde{r} + \frac{\tilde{\sigma}^2}{2}\right)(T-t)}{\tilde{\sigma}\sqrt{T-t}},
         \quad d_2 = d_1 - \sigma\sqrt{T-t}.
         """
         T = self.config.T
@@ -103,14 +113,17 @@ class EuropeanOption(BaseOption):
         vol = tf.expand_dims(params[:, :, :, 1], -1)
         k = tf.expand_dims(params[:, :, :, 2], -1)
         K = k * self.config.x_init
-        d1 = (tf.math.log(x / K) + (r + vol ** 2 / 2) * (T - t)) / (vol * tf.math.sqrt(T - t) + 0.000001)
+        d1 = (tf.math.log(x / K) + (r + vol**2 / 2) * (T - t)) / (
+            vol * tf.math.sqrt(T - t) + 0.000001
+        )
         d2 = d1 - vol * tf.math.sqrt(T - t)
         return x * dist.cdf(d1) - K * tf.exp(-r * (T - t)) * dist.cdf(d2)
+
 
 class TimeEuropean(EuropeanOption):
     def __init__(self, config):
         super(TimeEuropean, self).__init__(config)
-    
+
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor):
         """
         Implement the BS formula under time dependent case
@@ -119,23 +132,27 @@ class TimeEuropean(EuropeanOption):
         r0 = tf.expand_dims(u_hat[:, :, :, 0], -1)
         r1 = tf.expand_dims(u_hat[:, :, :, 1], -1)
         r2 = tf.expand_dims(u_hat[:, :, :, 2], -1)
-        r_T = r0 * T + r1 * T ** 2 /2 + r2 * T ** 3/3 
-        r_t = r0 * t + r1 * t ** 2 /2 + r2 * t ** 3/3 
-        r = (r_T - r_t)/((T - t) + 0.000001)
+        r_T = r0 * T + r1 * T**2 / 2 + r2 * T**3 / 3
+        r_t = r0 * t + r1 * t**2 / 2 + r2 * t**3 / 3
+        r = (r_T - r_t) / ((T - t) + 0.000001)
         s0 = tf.expand_dims(u_hat[:, :, :, 3], -1)
         beta = tf.expand_dims(u_hat[:, :, :, 4], -1)
-        vol2 = s0/2/beta * (1.0 - tf.exp(2*beta*(t - T))) / ((T-t) + 0.000001)
+        vol2 = s0 / 2 / beta * (1.0 - tf.exp(2 * beta * (t - T))) / ((T - t) + 0.000001)
         K = tf.expand_dims(u_hat[:, :, :, -1], -1)
-        d1 = (tf.math.log(x / K) + (r + vol2/ 2) * (T - t)) / (tf.math.sqrt(vol2 * (T-t)))
-        d2 = d1 - (tf.math.sqrt(vol2 * (T-t)))
-        c = self.config.x_init * (x * dist.cdf(d1) - K * tf.exp(-r * (T - t)) * dist.cdf(d2))
+        d1 = (tf.math.log(x / K) + (r + vol2 / 2) * (T - t)) / (
+            tf.math.sqrt(vol2 * (T - t))
+        )
+        d2 = d1 - (tf.math.sqrt(vol2 * (T - t)))
+        c = self.config.x_init * (
+            x * dist.cdf(d1) - K * tf.exp(-r * (T - t)) * dist.cdf(d2)
+        )
         return c
 
 
 class EuropeanSwap(EuropeanOption):
     def __init__(self, config):
         super(EuropeanSwap, self).__init__(config)
-        self.strike = 0.05 #we assume all products have a unified strike
+        self.strike = 0.05  # we assume all products have a unified strike
 
     def payoff(self, x: tf.Tensor, param: tf.Tensor, **kwargs):
         r"""
@@ -153,26 +170,29 @@ class EuropeanSwap(EuropeanOption):
             swap payoff. Tensor of shape (batch_size, sample_size, 1)
         """
         k = tf.expand_dims(param[:, :, 0, -1], axis=-1)
-        temp = tf.reduce_mean(x[:, :, -1, :self.config.dim], axis=-1, keepdims=True) # (B, M, 1)
+        temp = tf.reduce_mean(
+            x[:, :, -1, : self.config.dim], axis=-1, keepdims=True
+        )  # (B, M, 1)
         K = k * self.config.x_init
         return temp - K
-    
+
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, params: tf.Tensor):
         """
         Implement the BS formula
         """
         k = tf.expand_dims(params[:, :, :, -1], axis=-1)
-        x = tf.reduce_mean(x[:, :, :, :self.config.dim], axis=-1, keepdims=True)
+        x = tf.reduce_mean(x[:, :, :, : self.config.dim], axis=-1, keepdims=True)
         T = self.config.T
         r = tf.expand_dims(params[:, :, :, 0], -1)
         K = k * self.config.x_init
-        c = x - K * tf.exp(-r * (T-t))
+        c = x - K * tf.exp(-r * (T - t))
         return c
+
 
 class EuropeanBasketOption(EuropeanOption):
     def __init__(self, config):
         super(EuropeanBasketOption, self).__init__(config)
-    
+
     def payoff(self, x: tf.Tensor, u_hat: tf.Tensor, **kwargs):
         r"""
         The payoff function is \max{G_T - K, 0} where:
@@ -190,11 +210,13 @@ class EuropeanBasketOption(EuropeanOption):
             basket option payoff. Tensor of shape (batch_size, sample_size, 1)
             when self.config.dim = 1, this reduced to 1-d vanilla call payoff
         """
-        k = tf.expand_dims(u_hat[:, :, 0, -1], axis=-1) # (B, M, 1)
+        k = tf.expand_dims(u_hat[:, :, 0, -1], axis=-1)  # (B, M, 1)
         K = k * self.config.x_init
-        temp = tf.exp(tf.reduce_mean(tf.math.log(x[:, :, -1, :]), axis=-1, keepdims=True))# (B, M, 1)
+        temp = tf.exp(
+            tf.reduce_mean(tf.math.log(x[:, :, -1, :]), axis=-1, keepdims=True)
+        )  # (B, M, 1)
         return tf.nn.relu(temp - K)
-    
+
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor):
         """
         Implement the BS formula
@@ -206,43 +228,55 @@ class EuropeanBasketOption(EuropeanOption):
         rho = tf.expand_dims(u_hat[:, :, :, 2], -1)
         k = tf.expand_dims(u_hat[:, :, :, 3], -1)
         K = k * self.config.x_init
-        vol_bar = vol * tf.math.sqrt(1/d + rho * (1-1/d))
+        vol_bar = vol * tf.math.sqrt(1 / d + rho * (1 - 1 / d))
         S_pi = tf.exp(tf.reduce_mean(tf.math.log(x), axis=-1, keepdims=True))
-        F = S_pi * tf.exp((r - vol**2/2 + vol_bar**2/2) * (T - t))
-        d_1 = (tf.math.log(F/K) + vol_bar ** 2/2 * (T - t))/vol_bar/tf.sqrt(T - t)
+        F = S_pi * tf.exp((r - vol**2 / 2 + vol_bar**2 / 2) * (T - t))
+        d_1 = (
+            (tf.math.log(F / K) + vol_bar**2 / 2 * (T - t)) / vol_bar / tf.sqrt(T - t)
+        )
         d_2 = d_1 - vol_bar * tf.sqrt(T - t)
         c = F * dist.cdf(d_1) - K * dist.cdf(d_2)
         return c
-    
-class  TimeEuropeanBasketOption(EuropeanBasketOption):
+
+
+class TimeEuropeanBasketOption(EuropeanBasketOption):
     def __init__(self, config):
         super(TimeEuropeanBasketOption, self).__init__(config)
         self.epsilon = 1e-6
-    
+
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor):
         d = self.config.dim
         T = self.config.T
         r0 = tf.expand_dims(u_hat[:, :, :, 0], -1)
         r1 = tf.expand_dims(u_hat[:, :, :, 1], -1)
         r2 = tf.expand_dims(u_hat[:, :, :, 2], -1)
-        r_T = r0 * T + r1 * T ** 2 /2 + r2 * T ** 3/3 
-        r_t = r0 * t + r1 * t ** 2 /2 + r2 * t ** 3/3 
-        r = (r_T - r_t)/((T - t) + self.epsilon)
+        r_T = r0 * T + r1 * T**2 / 2 + r2 * T**3 / 3
+        r_t = r0 * t + r1 * t**2 / 2 + r2 * t**3 / 3
+        r = (r_T - r_t) / ((T - t) + self.epsilon)
         s0 = tf.expand_dims(u_hat[:, :, :, 3], -1)
         beta = tf.expand_dims(u_hat[:, :, :, 4], -1)
-        vol2 = s0/2/beta * (1.0 - tf.exp(2*beta*(t - T))) / ((T-t) + self.epsilon)
+        vol2 = (
+            s0
+            / 2
+            / beta
+            * (1.0 - tf.exp(2 * beta * (t - T)))
+            / ((T - t) + self.epsilon)
+        )
         rho = tf.expand_dims(u_hat[:, :, :, 2], -1)
         k = tf.expand_dims(u_hat[:, :, :, -1], -1)
         K = k * self.config.x_init
         vol = tf.math.sqrt(vol2)
-        vol_bar = vol * tf.math.sqrt(1/d + rho * (1-1/d))
+        vol_bar = vol * tf.math.sqrt(1 / d + rho * (1 - 1 / d))
         S_pi = tf.exp(tf.reduce_mean(tf.math.log(x), axis=-1, keepdims=True))
-        F = S_pi * tf.exp((r - vol**2/2 + vol_bar**2/2) * (T - t))
-        d_1 = (tf.math.log(F/K) + vol_bar ** 2/2 * (T - t))/vol_bar/tf.sqrt(T - t)
+        F = S_pi * tf.exp((r - vol**2 / 2 + vol_bar**2 / 2) * (T - t))
+        d_1 = (
+            (tf.math.log(F / K) + vol_bar**2 / 2 * (T - t)) / vol_bar / tf.sqrt(T - t)
+        )
         d_2 = d_1 - vol_bar * tf.sqrt(T - t)
         c = F * dist.cdf(d_1) - K * dist.cdf(d_2)
         return c
-    
+
+
 class LookbackOption(EuropeanOption):
     def __init__(self, config):
         super(LookbackOption, self).__init__(config)
@@ -277,11 +311,15 @@ class LookbackOption(EuropeanOption):
             lookback option payoff. Tensor of shape (batch_size, sample_size, 1)
             when self.config.dim = 1, this reduced to 1-d vanilla call payoff
         """
-        temp = tf.reduce_mean(x[:, :, -1, :self.config.dim], axis=-1, keepdims=True) # (B, M, 1)
-        float_min = tf.math.reduce_min(x[:, :, :, :self.config.dim], axis=2, keepdims=True) # (B, M, 1, d)
-        temp_min = tf.reduce_mean(float_min, axis=-1) # (B,M,1)
+        temp = tf.reduce_mean(
+            x[:, :, -1, : self.config.dim], axis=-1, keepdims=True
+        )  # (B, M, 1)
+        float_min = tf.math.reduce_min(
+            x[:, :, :, : self.config.dim], axis=2, keepdims=True
+        )  # (B, M, 1, d)
+        temp_min = tf.reduce_mean(float_min, axis=-1)  # (B,M,1)
         return temp - temp_min
-    
+
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor):
         r"""
         In this x has the dimension:
@@ -303,15 +341,29 @@ class LookbackOption(EuropeanOption):
         T = self.config.T
         r = tf.expand_dims(u_hat[:, :, :, 0], -1)
         vol = tf.expand_dims(u_hat[:, :, :, 1], -1)
-        X_t = x[...,:dim]
-        m_t = x[...,dim:]
-        a_1 = (tf.math.log(X_t/m_t) + (r + vol ** 2/2) * (T - t))/(vol * tf.math.sqrt(T - t))
+        X_t = x[..., :dim]
+        m_t = x[..., dim:]
+        a_1 = (tf.math.log(X_t / m_t) + (r + vol**2 / 2) * (T - t)) / (
+            vol * tf.math.sqrt(T - t)
+        )
         a_2 = a_1 - vol * tf.math.sqrt(T - t)
-        a_3 = a_1 - 2 * r/vol * tf.math.sqrt(T - t)
-        y_t = X_t * dist.cdf(a_1) - m_t * tf.exp(-r * (T-t)) * dist.cdf(a_2) - \
-            X_t * vol ** 2/(2 * r) * (dist.cdf(-a_1) - tf.exp(-r * (T-t)) * (m_t/X_t) ** (2 * r / vol**2) * dist.cdf(-a_3)) 
+        a_3 = a_1 - 2 * r / vol * tf.math.sqrt(T - t)
+        y_t = (
+            X_t * dist.cdf(a_1)
+            - m_t * tf.exp(-r * (T - t)) * dist.cdf(a_2)
+            - X_t
+            * vol**2
+            / (2 * r)
+            * (
+                dist.cdf(-a_1)
+                - tf.exp(-r * (T - t))
+                * (m_t / X_t) ** (2 * r / vol**2)
+                * dist.cdf(-a_3)
+            )
+        )
         y_t = tf.reduce_mean(y_t, axis=-1, keepdims=True)
         return y_t
+
 
 class GeometricAsian(EuropeanOption):
     r"""
@@ -321,9 +373,10 @@ class GeometricAsian(EuropeanOption):
     K: float or torch.tensor
         Strike. Id K is a tensor, it needs to have shape (batch_size)
     """
+
     def __init__(self, config):
         super(GeometricAsian, self).__init__(config)
-    
+
     def markovian_var(self, x: tf.Tensor):
         """
         x is a (B, M, N, d) size or (B, M, N, d+d) (SV model)
@@ -335,13 +388,13 @@ class GeometricAsian(EuropeanOption):
         $$
         """
         dt = self.config.dt
-        x = x[...,:self.config.dim]
+        x = x[..., : self.config.dim]
         dt_tensor = tf.math.cumsum(tf.ones(tf.shape(x)) * dt, axis=2)
         sumlog = tf.math.cumsum(tf.math.log(x), axis=2)
         log_average = sumlog * dt / dt_tensor
         geo_average = tf.exp(log_average)
         return geo_average
-   
+
     def payoff(self, x_arg: tf.Tensor, param: tf.Tensor):
         r"""
         The payoff function of multidimensional Geomatric Asian option is \max{A_T - K, 0} where:
@@ -357,12 +410,16 @@ class GeometricAsian(EuropeanOption):
         payoff: tf.Tensor
             Asian option payoff. Tensor of shape (B, M, 1)
         """
-        k = tf.expand_dims(param[:, :, 0, -1], axis=-1) # (B, M, 1)
+        k = tf.expand_dims(param[:, :, 0, -1], axis=-1)  # (B, M, 1)
         K = k * self.config.x_init
         dt = self.config.dt
         T = self.config.T
-        x = x_arg[...,:self.config.dim]
-        geo_mean = tf.reduce_mean(tf.exp(tf.reduce_sum(tf.math.log(x), axis=2) * dt / T), axis=-1, keepdims=True)
+        x = x_arg[..., : self.config.dim]
+        geo_mean = tf.reduce_mean(
+            tf.exp(tf.reduce_sum(tf.math.log(x), axis=2) * dt / T),
+            axis=-1,
+            keepdims=True,
+        )
         return tf.nn.relu(geo_mean - K)
 
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor):
@@ -389,31 +446,46 @@ class GeometricAsian(EuropeanOption):
         vol = tf.expand_dims(u_hat[:, :, :, 1], -1)
         k = tf.expand_dims(u_hat[:, :, :, 2], -1)
         K = k * self.config.x_init
-        y_t = x[...,:self.config.dim]
-        G_t = x[...,self.config.dim:]
-        mu_bar = (r - vol**2/2) * (T - t)**2/2/T
-        vol_bar = vol/T * tf.math.sqrt((T - t) ** 3/3)
-        d_2 = (t/T * tf.math.log(G_t) + (1 - t/T) * tf.math.log(y_t) + mu_bar - tf.math.log(K))/vol_bar
+        y_t = x[..., : self.config.dim]
+        G_t = x[..., self.config.dim :]
+        mu_bar = (r - vol**2 / 2) * (T - t) ** 2 / 2 / T
+        vol_bar = vol / T * tf.math.sqrt((T - t) ** 3 / 3)
+        d_2 = (
+            t / T * tf.math.log(G_t)
+            + (1 - t / T) * tf.math.log(y_t)
+            + mu_bar
+            - tf.math.log(K)
+        ) / vol_bar
         d_1 = d_2 + vol_bar
-        A = tf.exp(-r * (T - t))*(G_t ** (t/T) * y_t ** (1 - t/T) * tf.exp(mu_bar + vol_bar**2/2) * dist.cdf(d_1) - K * dist.cdf(d_2))
+        A = tf.exp(-r * (T - t)) * (
+            G_t ** (t / T)
+            * y_t ** (1 - t / T)
+            * tf.exp(mu_bar + vol_bar**2 / 2)
+            * dist.cdf(d_1)
+            - K * dist.cdf(d_2)
+        )
         return A
-        
 
 
 class InterestRateSwap(BaseOption):
     """
     This class implement the payoff and exact price of swap and swaption.
-    For testing issue, we just implement the simpliest version, 
+    For testing issue, we just implement the simpliest version,
     where swap just happen twice for three years.
     """
+
     def __init__(self, config):
         super(InterestRateSwap, self).__init__(config)
-        self.strike_range = self.config.strike_range #the distribution of the fixed coupon rate
-        self.leg_dates = self.config.leg_dates #a list with first element $T_0$ as the first 
+        self.strike_range = (
+            self.config.strike_range
+        )  # the distribution of the fixed coupon rate
+        self.leg_dates = (
+            self.config.leg_dates
+        )  # a list with first element $T_0$ as the first
         self.fix_rate = 0.01
         self.sde = HullWhiteModel(config)
         self.notional = 1.0
-        self.epsilon=1e-3
+        self.epsilon = 1e-3
 
     @property
     def delta_t(self):
@@ -425,21 +497,20 @@ class InterestRateSwap(BaseOption):
     def reset_dates(self, leg_dates: list):
         self.leg_dates = leg_dates
 
-
     @property
     def float_start_dates(self):
         """
         this gives [T_0, ..., T_{M-1}]
         """
         return self.leg_dates[:-1]
-    
+
     @property
     def float_end_dates(self):
         """
         this gives [T_1, ..., T_{M}]
         """
         return self.leg_dates[1:]
-    
+
     def fix_legs(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
         return a tensor containing the leg value at given time and state for all maturities in the list
@@ -448,67 +519,85 @@ class InterestRateSwap(BaseOption):
         u_hat: [B, M, k]
         """
         # fix_rate = tf.expand_dims(u_hat[:, :, -1], -1) # (B, M, 1)
-        p_list = [self.fix_rate * self.sde.zcp_value(t, x, u_hat, end_date) * self.delta_t 
-                  for end_date in self.float_end_dates]
+        p_list = [
+            self.fix_rate * self.sde.zcp_value(t, x, u_hat, end_date) * self.delta_t
+            for end_date in self.float_end_dates
+        ]
         fix_legs = tf.concat(p_list, axis=-1)
         return fix_legs
-    
+
     def float_legs(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
         return a tensor containing the leg value at given time and state for all maturities in the list
         """
-        p_list = [self.one_float_leg(t, x, u_hat, end_date) 
-                  for end_date in self.float_end_dates] 
+        p_list = [
+            self.one_float_leg(t, x, u_hat, end_date)
+            for end_date in self.float_end_dates
+        ]
         float_legs = tf.concat(p_list, axis=-1)
         return float_legs
-    
-    def one_float_leg(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor, terminal_date: tf.Tensor) -> tf.Tensor:
+
+    def one_float_leg(
+        self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor, terminal_date: tf.Tensor
+    ) -> tf.Tensor:
         """
-        return P(t, T_{i-1}) - P(t, T_{i}) 
+        return P(t, T_{i-1}) - P(t, T_{i})
         T_{i-1} + \Delta T = T_{i}
         T_{i-1}: float start date
         T_{i}: float end date
         """
-        float_leg = self.sde.zcp_value(t, x, u_hat, terminal_date - self.delta_t) - \
-            self.sde.zcp_value(t, x, u_hat, terminal_date)
-        return tf.where(t > terminal_date - self.delta_t + self.epsilon, 0., float_leg)
-    
+        float_leg = self.sde.zcp_value(
+            t, x, u_hat, terminal_date - self.delta_t
+        ) - self.sde.zcp_value(t, x, u_hat, terminal_date)
+        return tf.where(t > terminal_date - self.delta_t + self.epsilon, 0.0, float_leg)
+
     def swap_value(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
         t: (B, M, 1)
         x: (B, M, d), d=1 usually
         u_hat: [B, M, k]
         """
-        float_legs = self.float_legs(t, x, u_hat) # (B, M, T)
-        fix_legs = self.fix_legs(t, x, u_hat) # (B, M, T)
-        return self.notional * tf.reduce_sum(fix_legs - float_legs, axis=-1, keepdims=True) # (B, M, 1)
-    
+        float_legs = self.float_legs(t, x, u_hat)  # (B, M, T)
+        fix_legs = self.fix_legs(t, x, u_hat)  # (B, M, T)
+        return self.notional * tf.reduce_sum(
+            fix_legs - float_legs, axis=-1, keepdims=True
+        )  # (B, M, 1)
+
     def payoff_inter(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         r"""
-        This gives the value of a swaption which swap for 2 times at expiry date. 
+        This gives the value of a swaption which swap for 2 times at expiry date.
         It is written as the following form:
          v = 1 - K * P(1, 2) - (1 + K) * P(1, 3)
         x: [B, M, 1] must corresponded to the time t_s
         u_hat: [B, M, 1]
         return the value v: [B, M, 1]
         """
-        p_12 = self.zcp(1.0, x[:,:,-1,:], u_hat[:,:,-1,:], 2.0)
-        p_13 = self.zcp(1.0, x[:,:,-1,:], u_hat[:,:,-1,:], 3.0)
+        p_12 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 2.0)
+        p_13 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 3.0)
         return 1.0 - self.fix_rate * p_12 - (1.0 + self.fix_rate) * p_13
-    
-    def payoff_at_maturity(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+
+    def payoff_at_maturity(
+        self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor
+    ) -> tf.Tensor:
         r"""
-        This gives the value of a swaption which swap for 1 times at expiry date. 
+        This gives the value of a swaption which swap for 1 times at expiry date.
         It is written as the following form:
          v = 1 - (1 + K) * P(2, 3)
         x: [B, M, 1] must corresponded to the time t_s
         u_hat: [B, M, 1]
         return the value v: [B, M, 1]
         """
-        p_23 = self.zcp(self.config.leg_dates[1], x[:,:,-1,:], u_hat[:,:,-1,:], self.config.leg_dates[-1])
+        p_23 = self.zcp(
+            self.config.leg_dates[1],
+            x[:, :, -1, :],
+            u_hat[:, :, -1, :],
+            self.config.leg_dates[-1],
+        )
         return 1.0 - (1.0 + self.fix_rate) * p_23
-    
-    def zcp(self, t_s: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor, t_e: tf.Tensor) -> tf.Tensor:
+
+    def zcp(
+        self, t_s: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor, t_e: tf.Tensor
+    ) -> tf.Tensor:
         r"""
         zcp is the abbreviation of zero_coupon_bond. It is written as the following form:
          P(t_s, t_e) = A(t_s, t_e) * \exp{-B(t_s, t_e) * r_{t_s}} where function A and B are functions of t_e - t_s
@@ -519,15 +608,17 @@ class InterestRateSwap(BaseOption):
         t_e: a float scalar or a [B, M, 1] tensor, which represents the bond end time
         return the value of zero coupon bond P(t_s, t_e): [B, M, 1]
 
-        However this can also enter 4-D tensors, but the dimension of x and u_hat and t_s and t_e (if it is also tensors) 
+        However this can also enter 4-D tensors, but the dimension of x and u_hat and t_s and t_e (if it is also tensors)
         must be consistent!
         """
         kappa = tf.expand_dims(u_hat[..., 0], axis=-1)
         theta = tf.expand_dims(u_hat[..., 1], axis=-1)
         sigma = tf.expand_dims(u_hat[..., 2], axis=-1)
-        B = (1 - tf.exp(-kappa * (t_e - t_s)))/ kappa
-        A = tf.exp((B - t_e + t_s)*(kappa**2 * theta - sigma**2/2)/kappa**2 +\
-                     (sigma*B)**2/(4*kappa))
+        B = (1 - tf.exp(-kappa * (t_e - t_s))) / kappa
+        A = tf.exp(
+            (B - t_e + t_s) * (kappa**2 * theta - sigma**2 / 2) / kappa**2
+            + (sigma * B) ** 2 / (4 * kappa)
+        )
         p_se = A * tf.exp(-B * tf.reduce_sum(x, axis=-1, keepdims=True))
         return p_se
 
@@ -545,24 +636,28 @@ class InterestRateSwap(BaseOption):
         p_end = self.zcp(t, x, u_hat, self.config.leg_dates[-1])
         v = p_start - self.fix_rate * p_mid - (1.0 + self.fix_rate) * p_end
         return v
-    
-    
+
+
 class ZeroCouponBond(BaseOption):
     def __init__(self, config):
         super(ZeroCouponBond, self).__init__(config)
-        self.strike_range = self.config.strike_range #the distribution of the fixed coupon rate
-        self.leg_dates = self.config.leg_dates #a list with first element $T_0$ as the first 
+        self.strike_range = (
+            self.config.strike_range
+        )  # the distribution of the fixed coupon rate
+        self.leg_dates = (
+            self.config.leg_dates
+        )  # a list with first element $T_0$ as the first
         self.terminal_date = self.config.T
         self.sde = HullWhiteModel(config)
         self.fix_rate = 0.05
-    
+
     def payoff(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         r"""
         The price formula is:
-        v = 1 
+        v = 1
         """
-        return 1.0 
-    
+        return 1.0
+
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
         t: [B, M, N, 1]
@@ -575,16 +670,11 @@ class ZeroCouponBond(BaseOption):
         kappa = tf.expand_dims(u_hat[..., 0], axis=-1)
         theta = tf.expand_dims(u_hat[..., 1], axis=-1)
         sigma = tf.expand_dims(u_hat[..., 2], axis=-1)
-        B = (1 - tf.exp(-kappa * (terminal_date - t)))/ kappa
-        A = tf.exp((B - terminal_date + t)*(kappa**2 * theta - sigma**2/2)/kappa**2 +\
-                     (sigma*B)**2/(4*kappa))
+        B = (1 - tf.exp(-kappa * (terminal_date - t))) / kappa
+        A = tf.exp(
+            (B - terminal_date + t) * (kappa**2 * theta - sigma**2 / 2) / kappa**2
+            + (sigma * B) ** 2 / (4 * kappa)
+        )
         p_t1 = A * tf.exp(-B * tf.reduce_sum(x, axis=-1, keepdims=True))
         v = p_t1
-        return v 
-
-
-    
-    
-
-
-
+        return v
