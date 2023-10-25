@@ -54,16 +54,27 @@ def create_dataset(
     M = config.eqn_config.sample_size
     N = config.eqn_config.time_steps
     d = config.eqn_config.dim
-
-    gen_dataset = tf.data.Dataset.from_generator(
-        gen_data_generator,
-        output_signature=(
-            tf.TensorSpec(shape=(None, M, N + 1, 1)),
-            tf.TensorSpec(shape=(None, M, N + 1, d)),
-            tf.TensorSpec(shape=(None, M, N, d)),
-            tf.TensorSpec(shape=(None, M, N + 1, None)),
-        ),
-    )
+    if sde_name != "SV":
+        gen_dataset = tf.data.Dataset.from_generator(
+            gen_data_generator,
+            output_signature=(
+                tf.TensorSpec(shape=(None, M, N + 1, 1)),
+                tf.TensorSpec(shape=(None, M, N + 1, d)),
+                tf.TensorSpec(shape=(None, M, N, d)),
+                tf.TensorSpec(shape=(None, M, N + 1, None)),
+            ),
+        )
+    else:
+        gen_dataset = tf.data.Dataset.from_generator(
+            gen_data_generator,
+            output_signature=(
+                tf.TensorSpec(shape=(None, M, N + 1, 1)),
+                tf.TensorSpec(shape=(None, M, N + 1, 2 * d)),
+                tf.TensorSpec(shape=(None, M, N, 2 * d)),
+                tf.TensorSpec(shape=(None, M, N + 1, None)),
+            ),
+        )
+        
 
     for element in gen_dataset.take(1):
         t, x, dw, u = element
@@ -83,4 +94,3 @@ def create_dataset(
 
 def save_dataset(dataset, path):
     tf.data.experimental.save(dataset, path)
-    

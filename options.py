@@ -31,10 +31,24 @@ class BaseOption:
             int(num) for num in [k * self.time_steps_one_year for k in self.exer_dates]
         ]  # the list of index of the tensor of time stamp
 
-    def payoff(self, x: tf.Tensor, u_hat: tf.Tensor, **kwargs):
+    def payoff(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor, **kwargs):
+        """
+        t: [B, M, 1]
+        x: [B, M, d * j], j is the number of markovian variable
+        u_hat: [B, M, k]
+
+        return: [B, M, 1]
+        """
         raise NotImplementedError
 
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor):
+        """
+        t: [B, M, N, 1]
+        x: [B, M, N, d * j], j is the number of markovian variable
+        u_hat: [B, M, N, k]
+
+        return: [B, M, N, 1]
+        """
         raise NotImplementedError
 
     def expand_batch_inputs_dim(self, par: tf.Tensor):
@@ -77,7 +91,7 @@ class EuropeanOption(BaseOption):
         self.style = self.config.style
         self.epsilon = 1e-6
 
-    def payoff(self, x: tf.Tensor, param: tf.Tensor, **kwargs):
+    def payoff(self, t: tf.Tensor, x: tf.Tensor, param: tf.Tensor):
         r"""
         The payoff function is \max{S_T - K, 0} where:
           K is strike price which is included into u_hat
@@ -165,7 +179,7 @@ class EuropeanSwap(EuropeanOption):
         super(EuropeanSwap, self).__init__(config)
         self.strike = 0.05  # we assume all products have a unified strike
 
-    def payoff(self, x: tf.Tensor, param: tf.Tensor, **kwargs):
+    def payoff(self, t: tf.Tensor, x: tf.Tensor, param: tf.Tensor):
         r"""
         The payoff function is S_T - K where:
           K is forward price which is predetermined which is included into u_hat

@@ -655,6 +655,19 @@ class HestonModel(ItoProcessDriver):
         vol_of_vol = tf.reshape(u_hat[:, 3], [batch, 1, 1]) # [B, 1, 1]
         vol_diffusion = vol_of_vol * sqrt_vol # [B, 1, 1] * [B, M, d] -> [B, M, d]
         return tf.concat([asset_diffusion, vol_diffusion], axis=-1) # [B, M, 2d]
+    
+    def driver_bsde(
+        self, t: tf.Tensor, x: tf.Tensor, y: tf.Tensor, u_hat: tf.Tensor
+    ) -> tf.Tensor:
+        """
+        this yields the driver term of the BSDE coupled with this SDE
+        param t: [B, M, N, 1]
+        param x: [B, M, N, 2d]
+        param y: [B, M, N, 1]
+        param u_hat: [B, M, N, 6]
+        """
+        r = u_hat[:, :, :, 0:1]  # [B, M, N, 1]
+        return -r * y
 
     def corr_matrix_1d(self, state: tf.Tensor, u_hat: tf.Tensor):
         r"""

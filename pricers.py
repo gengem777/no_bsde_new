@@ -83,7 +83,7 @@ class BaseBSDEPricer(tf.keras.Model):
                 self.no_net = DeepKernelONetwithPI(
                     branch_layer=self.net_config.branch_layer_sizes,
                     trunk_layer=self.net_config.trunk_layer_sizes,
-                    pi_layer=self.pi_layer_sizes,
+                    pi_layer=self.net_config.pi_layer_sizes,
                     num_assets=self.dim,
                     dense=True,
                     num_outputs=6,
@@ -93,7 +93,7 @@ class BaseBSDEPricer(tf.keras.Model):
                 self.no_net = DeepKernelONetwithPI(
                     branch_layer=self.net_config.branch_layer_sizes,
                     trunk_layer=self.net_config.trunk_layer_sizes,
-                    pi_layer=self.pi_layer_sizes,
+                    pi_layer=self.net_config.pi_layer_sizes,
                     num_assets=self.dim,
                     dense=False,
                     num_outputs=6,

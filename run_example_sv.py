@@ -23,8 +23,8 @@ option_list = [
 ]
 dim_list = [1, 3, 5, 10, 20]
 
-sde_name = "HW"
-option_name = "Bond"
+sde_name = "SV"
+option_name = "Swap"
 dim = 1
 
 if (
@@ -52,14 +52,14 @@ samples = config.eqn_config.sample_size
 time_steps = config.eqn_config.time_steps
 dims = config.eqn_config.dim
 dataset_path = f"./dataset/{sde_name}_{option_name}_{dim}_{time_steps}"
-create_dataset("HW", "Bond", 1, 50)
+create_dataset(sde_name, option_name, dim, 50)
 dataset = tf.data.experimental.load(
     dataset_path,
     element_spec=(
         tf.TensorSpec(shape=(samples, time_steps + 1, 1)),
-        tf.TensorSpec(shape=(samples, time_steps + 1, dims)),
-        tf.TensorSpec(shape=(samples, time_steps, dims)),
-        tf.TensorSpec(shape=(samples, time_steps + 1, 4)),
+        tf.TensorSpec(shape=(samples, time_steps + 1, 2 * dims)),
+        tf.TensorSpec(shape=(samples, time_steps, 2 * dims)),
+        tf.TensorSpec(shape=(samples, time_steps + 1, 6)),
     ),
 )
 dataset = dataset.batch(config.eqn_config.batch_size)
