@@ -327,7 +327,7 @@ class LookbackOption(EuropeanOption):
         markov = tf.stack(m_list, axis=2)
         return markov
 
-    def payoff(self, x: tf.Tensor, u_hat: tf.Tensor):
+    def payoff(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor):
         r"""
         The payoff function is \max{S_T - m_T, 0} where:
           m_T is floating minimum at time T.
@@ -381,7 +381,7 @@ class LookbackOption(EuropeanOption):
         X_t = x[..., :dim]
         m_t = x[..., dim:]
         a_1 = (tf.math.log(X_t / m_t) + (r + vol**2 / 2) * (T - t)) / (
-            vol * tf.math.sqrt(T - t)
+            vol * tf.math.sqrt(T - t) + self.epsilon
         )
         a_2 = a_1 - vol * tf.math.sqrt(T - t)
         a_3 = a_1 - 2 * r / vol * tf.math.sqrt(T - t)
@@ -432,7 +432,7 @@ class GeometricAsian(EuropeanOption):
         geo_average = tf.exp(log_average)  # [B, M, N, d]
         return geo_average
 
-    def payoff(self, x_arg: tf.Tensor, param: tf.Tensor):
+    def payoff(self, t: tf.Tensor, x_arg: tf.Tensor, param: tf.Tensor):
         r"""
         The payoff function of multidimensional Geomatric Asian option is \max{A_T - K, 0} where:
           A_T is geometric average on the path of the asset at time T.

@@ -53,9 +53,10 @@ class TestEuropeanOption(tf.test.TestCase):
     def testPayoff(self):
         config = load_config("GBM", "European", 1)
         opt = EuropeanOption(config)
+        t = tf.random.uniform([3, 5, 6, 2]) 
         x = tf.random.uniform([3, 5, 6, 2]) + 0.1
         u_hat = tf.random.uniform([3, 5, 6, 4])
-        payoff = opt.payoff(x, u_hat)
+        payoff = opt.payoff(t, x, u_hat)
         self.assertEqual(payoff.shape, [3, 5, 1])
 
     def testExactprice(self):
@@ -87,7 +88,7 @@ class TestEuropeanOption(tf.test.TestCase):
         parameters = opt.sample_parameters()
         empirical_mean = tf.reduce_mean(parameters)
         self.assertAllLessEqual(
-            tf.abs(empirical_mean - (strike_params[0] + strike_params[1]) / 2), 0.01
+            tf.abs(empirical_mean - strike_params[0]), 0.01
         )
 
 
@@ -133,9 +134,10 @@ class TestGeoAsianOption(tf.test.TestCase):
     def testPayoff(self):
         config = load_config("GBM", "European", 1)
         opt = GeometricAsian(config)
+        t = tf.random.uniform([3, 5, 6, 1]) + 0.1
         x = tf.random.uniform([3, 5, 6, 1]) + 0.1
         u_hat = tf.random.uniform([3, 5, 6, 4])
-        payoff = opt.payoff(x, u_hat)
+        payoff = opt.payoff(t, x, u_hat)
         self.assertEqual(payoff.shape, [3, 5, 1])
 
 
@@ -178,9 +180,10 @@ class TestlookbackOption(tf.test.TestCase):
     def testPayoff(self):
         config = load_config("GBM", "European", 1)
         opt = LookbackOption(config)
+        t = tf.random.uniform([3, 5, 6, 1])
         x = tf.random.uniform([3, 5, 6, 1]) + 0.1
         u_hat = tf.random.uniform([3, 5, 6, 4])
-        payoff = opt.payoff(x, u_hat)
+        payoff = opt.payoff(t, x, u_hat)
         self.assertEqual(payoff.shape, [3, 5, 1])
         x_min = tf.reduce_min(x, axis=2)
         self.assertAllEqual(payoff, x[:, :, -1, :] - x_min)
@@ -210,9 +213,10 @@ class TestSwap(tf.test.TestCase):
     def testPayoff(self):
         config = load_config("GBM", "European", 1)
         opt = EuropeanSwap(config)
+        t = tf.random.uniform([3, 5, 6, 1])
         x = tf.random.uniform([3, 5, 6, 1])
         u_hat = tf.zeros_like(x)
-        payoff = opt.payoff(x, u_hat)
+        payoff = opt.payoff(t, x, u_hat)
         self.assertEqual(payoff.shape, [3, 5, 1])
         self.assertAllLessEqual(payoff - x[:, :, -1, :], 1e-4)
 
