@@ -50,6 +50,9 @@ def load_config(sde_name: str, option_name: str, dim: int = 1):
 
 
 class TestEuropeanOption(tf.test.TestCase):
+    """
+    This test is for Vanilla option
+    """
     def testPayoff(self):
         config = load_config("GBM", "European", 1)
         opt = EuropeanOption(config)
@@ -93,6 +96,9 @@ class TestEuropeanOption(tf.test.TestCase):
 
 
 class TestGeoAsianOption(tf.test.TestCase):
+    """
+    This test is for Asian option
+    """
     def testMarkovVar(self):
         config = load_config("GBM", "European", 1)
         opt = GeometricAsian(config)
@@ -142,6 +148,9 @@ class TestGeoAsianOption(tf.test.TestCase):
 
 
 class TestlookbackOption(tf.test.TestCase):
+    """
+    This test is for lookback option
+    """
     def testMarkovVar(self):
         config = load_config("GBM", "European", 1)
         opt = LookbackOption(config)
@@ -210,6 +219,9 @@ class TestlookbackOption(tf.test.TestCase):
 
 
 class TestSwap(tf.test.TestCase):
+    """
+    This test is for swap and forward
+    """
     def testPayoff(self):
         config = load_config("GBM", "European", 1)
         opt = EuropeanSwap(config)
@@ -245,6 +257,9 @@ class TestSwap(tf.test.TestCase):
 
 
 class TestInterestRateSwap(tf.test.TestCase):
+    """
+    This test is for swap and swaption
+    """
     def setUp(self):
         self.config = load_config("HW", "Swaption", 1)
         self.sde = HullWhiteModel(self.config)

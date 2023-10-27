@@ -44,6 +44,9 @@ def load_config(sde_name: str, option_name: str, dim: int = 1):
 
 
 class TestGeometricBrowianMotion(tf.test.TestCase):
+    """
+    This test is for GBM and time dependent GBM
+    """
     def test_initial_sampler(self):
         config = load_config("GBM", "European", 1)
         sde = GeometricBrownianMotion(config)
@@ -108,6 +111,9 @@ class TestGeometricBrowianMotion(tf.test.TestCase):
 
 
 class TestHestonModel(tf.test.TestCase):
+    """
+    This test is for stochastic volatility model
+    """
     def test_initial_sampler(self):
         config = load_config("SV", "Swap", 1)
         sde = HestonModel(config)
@@ -236,6 +242,9 @@ class TestHestonModel(tf.test.TestCase):
 
 
 class TestHullWhiteModel(tf.test.TestCase):
+    """
+    This test is for one factor Hull white model
+    """
     def test_positivity(self):
         config = load_config("HW", "Swaption", 1)
         sde = HullWhiteModel(config)

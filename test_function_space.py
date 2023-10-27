@@ -4,6 +4,9 @@ import numpy as np
 
 
 class TestPermutationInvariantLayer(tf.test.TestCase):
+    """
+    This class test the function of permutation invariant layers
+    """
     def testPIlayer(self):
         pi_layer_1 = PermutationInvariantLayer(5)
         pi_layer_2 = PermutationInvariantLayer(3)
@@ -51,6 +54,9 @@ class TestPermutationInvariantLayer(tf.test.TestCase):
 
 
 class TestDeepONetwithPI(tf.test.TestCase):
+    """
+    This class test the deep o net with part of trunk net being permutation invariant layers
+    """
     def testnumberofparams(self):
         l = 1
         m = 6
