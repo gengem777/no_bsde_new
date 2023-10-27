@@ -86,7 +86,7 @@ class BaseBSDEPricer(tf.keras.Model):
                     pi_layer=self.net_config.pi_layer_sizes,
                     num_assets=self.dim,
                     dense=True,
-                    num_outputs=6,
+                    num_outputs=self.net_config.num_outputs,
                     activation=self.activation,
                 )  # DeepONet with kernel operator be dense operator
             else:
@@ -96,7 +96,7 @@ class BaseBSDEPricer(tf.keras.Model):
                     pi_layer=self.net_config.pi_layer_sizes,
                     num_assets=self.dim,
                     dense=False,
-                    num_outputs=6,
+                    num_outputs=self.net_config.num_outputs,
                     activation=self.activation,
                     filters=self.net_config.num_filters,
                     strides=self.net_config.num_strides,
@@ -113,7 +113,7 @@ class BaseBSDEPricer(tf.keras.Model):
                     branch_layer=self.net_config.branch_layer_sizes,
                     trunk_layer=self.net_config.trunk_layer_sizes,
                     dense=True,
-                    num_outputs=6,
+                    num_outputs=self.net_config.num_outputs,
                     activation=self.activation,
                     filters=self.net_config.num_filters,
                     strides=self.net_config.num_strides,
@@ -376,7 +376,7 @@ class EuropeanPricer(MarkovianPricer):
                     pi_layer=self.pi_layer_sizes,
                     num_assets=self.dim,
                     dense=True,
-                    num_outputs=6,
+                    num_outputs=self.net_config.num_outputs,
                     activation=self.activation,
                 )
             else:
@@ -386,7 +386,7 @@ class EuropeanPricer(MarkovianPricer):
                     pi_layer=self.pi_layer_sizes,
                     num_assets=self.dim,
                     dense=False,
-                    num_outputs=6,
+                    num_outputs=self.net_config.num_outputs,
                     activation=self.activation,
                     filters=self.net_config.num_filters,
                     strides=self.net_config.num_strides,
@@ -403,7 +403,7 @@ class EuropeanPricer(MarkovianPricer):
                     branch_layer=self.net_config.branch_layer_sizes,
                     trunk_layer=self.net_config.trunk_layer_sizes,
                     dense=True,
-                    num_outputs=6,
+                    num_outputs=self.net_config.num_outputs,
                     activation=self.activation,
                     filters=self.net_config.num_filters,
                     strides=self.net_config.num_strides,
@@ -511,7 +511,7 @@ class EarlyExercisePricer:
                         pi_layer=self.pi_layer_sizes,
                         num_assets=self.dim,
                         dense=True,
-                        num_outputs=6,
+                        num_outputs=self.net_config.num_outputs,
                     )
                     for _ in range(len(self.exercise_index) - 1)
                 ]  # initialize a list of DeepKernelONetwithPI models with dense operator
@@ -523,7 +523,7 @@ class EarlyExercisePricer:
                         pi_layer=self.pi_layer_sizes,
                         num_assets=self.dim,
                         dense=False,
-                        num_outputs=6,
+                        num_outputs=self.net_config.num_outputs,
                         filters=self.net_config.num_filters,
                         strides=self.net_config.num_strides,
                     )
@@ -545,7 +545,7 @@ class EarlyExercisePricer:
                         branch_layer=self.net_config.branch_layer_sizes,
                         trunk_layer=self.net_config.trunk_layer_sizes,
                         dense=True,
-                        num_outputs=6,
+                        num_outputs=self.net_config.num_outputs,
                         filters=self.net_config.num_filters,
                         strides=self.net_config.num_strides,
                     )
