@@ -27,6 +27,29 @@ class BaseRepresentor:
     def get_sensor_value(self, u_hat: tf.Tensor) -> tf.Tensor:
         raise NotImplementedError
     
+
+class ConstantRepresentor(BaseRepresentor):
+    r"""
+    This class give the function as the flat function with form:
+      f(t,x) = c
+    """
+    def __init__(self, config):
+        super(ConstantRepresentor, self).__init__(config)
+        self.t_grid = tf.linspace(0.0, self.eqn_config.T, self.sensors)
+
+    def get_func_value(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        r"""
+        This method just do this thing: calculate the output tensor which calculated by:
+        f(t, x; c) = c,  c is the value which is same as that in u_hat with shape [B,M,N,1], 
+        then we hope the output has the shape [B,M,N,1] but the value is coherent with u_hat
+        The input tensor can be these two cases:
+        t: [B, M, 1] or [B, M, N, 1]
+        x: [B, M, d] or [B, M, N, d]
+        u_hat: [B, M, 1] or [B, M, N, 1] 
+        """
+        pass # TODO: make the calculation consistent
+
+    
 class QuadraticRepresentor(BaseRepresentor):
     r"""
     This class give the function as the quadratic function with form:
@@ -43,16 +66,21 @@ class QuadraticRepresentor(BaseRepresentor):
         The input tensor can be these two cases:
         t: [B, M, 1] or [B, M, N, 1]
         x: [B, M, d] or [B, M, N, d]
-        u_hat: [B, 1, k] or [B, M, N, k] 
+        u_hat: [B, M, k] or [B, M, N, k] 
         """
         # batch = tf.shape(x)[0] # t, x is [B, M, 1] [B, M, d] or [B, M, N, 1] [B, M, N, d] 
         r0 = tf.expand_dims(u_hat[..., 0], axis=-1) # [B, M, 1] or [B, M, N, 1]
         r1 = tf.expand_dims(u_hat[..., 1], axis=-1) # [B, M, 1] or [B, M, N, 1]
         r2 = tf.expand_dims(u_hat[..., 2], axis=-1) # [B, M, 1] or [B, M, N, 1]
         r = r0 + r1 * t + r2 * t ** 2 # [B, M, 1] or [B, M, N, 1]
+        assert tf.shape(r) == tf.shape(x)
         return r
     
     def get_sensor_value(self, u_hat: tf.Tensor) -> tf.Tensor:
+        """
+        this u_hat give the tensor corresponded to [r_0, r_1, r_2] 
+        then the actual dim is [B, M, N, 3]
+        """
         t = tf.reshape(self.t_grid, [1, 1, 1, self.sensors, 1])
         B_0 = tf.shape(u_hat)[0]
         B_1 = tf.shape(u_hat)[1]
@@ -66,9 +94,46 @@ class QuadraticRepresentor(BaseRepresentor):
         r2 = tf.tile(r2, [1, 1, 1, self.config.sensors, 1])
         r_curve = r0 + r1 * t * r2 * t**2
         return r_curve
-
-class ConstantRepresentor(BaseRepresentor):
-    pass
+    
 
 class ExponentialDecayRepresentor(BaseRepresentor):
-    pass
+    r"""
+    This class give the function as the quadratic function with form:
+      s(t) = s0 * exp(-\beta (T - t))
+    """
+    def __init__(self, config):
+        super(ExponentialDecayRepresentor, self).__init__(config)
+        self.t_grid = tf.linspace(0.0, self.eqn_config.T, self.sensors)
+    
+    def get_func_value(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        r"""
+        This method just do this thing: calculate the output tensor which calculated by:
+        s(t) = s0 * exp(-\beta (T - t))
+        The input tensor can be these two cases:
+        t: [B, M, 1] or [B, M, N, 1]
+        x: [B, M, d] or [B, M, N, d]
+        u_hat: [B, M, k] or [B, M, N, k] 
+        """
+        # batch = tf.shape(x)[0] # t, x is [B, M, 1] [B, M, d] or [B, M, N, 1] [B, M, N, d] 
+        s_0 = tf.expand_dims(u_hat[..., 0], axis=-1) # [B, M, 1] or [B, M, N, 1]
+        beta = tf.expand_dims(u_hat[..., 1], axis=-1) # [B, M, 1] or [B, M, N, 1]
+        T = self.eqn_config.T
+        s = s_0 * tf.exp(-beta * (T - t)) # [B, M, 1] or [B, M, N, 1]
+        return s
+    
+    def get_sensor_value(self, u_hat: tf.Tensor) -> tf.Tensor:
+        """
+        this u_hat give the tensor corresponded to [s_0, beta] 
+        then the actual dim is [B, M, N, 2]
+        """
+        t = tf.reshape(self.t_grid, [1, 1, 1, self.sensors, 1])
+        B_0 = tf.shape(u_hat)[0]
+        B_1 = tf.shape(u_hat)[1]
+        B_2 = tf.shape(u_hat)[2]
+        T = self.eqn_config.T
+        s0 = tf.reshape(u_hat[..., 0], [B_0, B_1, B_2, 1, 1])
+        s0 = tf.tile(s0, [1, 1, 1, self.config.sensors, 1])
+        beta = tf.reshape(u_hat[..., 1], [B_0, B_1, B_2, 1, 1])
+        beta = tf.tile(beta, [1, 1, 1, self.config.sensors, 1])
+        s_curve = s0 * tf.exp(beta * (t - T))
+        return s_curve
