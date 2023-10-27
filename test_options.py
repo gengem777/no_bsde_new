@@ -315,7 +315,6 @@ class TestInterestRateSwap(tf.test.TestCase):
             p2 = (
                 strike * zcp(t, r, 2) - (zcp(t, r, 1) - zcp(t, r, 2))
             ) * option1.notional
-            print(p1, p2)
             self.assertAllLessEqual(tf.reduce_mean(tf.abs(p1 - p2)), 1e-7)
 
 
