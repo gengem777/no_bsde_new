@@ -511,9 +511,9 @@ class GeometricAsian(EuropeanOption):
 
 class InterestRateSwap(BaseOption):
     """
-    This class implement the payoff and exact price of swap and swaption.
+    This class implement the payoff and exact price of swap and Bermudan swaption.
     For testing issue, we just implement the simpliest version,
-    where swap just happen twice for three years.
+    where swaption just happen twice for three years.
     """
 
     def __init__(self, config):

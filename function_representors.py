@@ -86,14 +86,14 @@ class QuadraticRepresentor(BaseRepresentor):
         B_1 = tf.shape(u_hat)[1]
         B_2 = tf.shape(u_hat)[2]
         t = tf.tile(t, [B_0, B_1, B_2, 1, 1])
-        r0 = tf.reshape(u_hat[..., 0], [B_0, B_1, B_2, 1, 1])
-        r0 = tf.tile(r0, [1, 1, 1, self.config.sensors, 1])
-        r1 = tf.reshape(u_hat[..., 1], [B_0, B_1, B_2, 1, 1])
-        r1 = tf.tile(r1, [1, 1, 1, self.config.sensors, 1])
-        r2 = tf.reshape(u_hat[..., 2], [B_0, B_1, B_2, 1, 1])
-        r2 = tf.tile(r2, [1, 1, 1, self.config.sensors, 1])
-        r_curve = r0 + r1 * t * r2 * t**2
-        return r_curve
+        r0 = tf.reshape(u_hat[..., 0], [B_0, B_1, B_2, 1, 1]) # [B, M, N, 1, 1]
+        r0 = tf.tile(r0, [1, 1, 1, self.config.sensors, 1]) # [B, M, N, sensors, 1]
+        r1 = tf.reshape(u_hat[..., 1], [B_0, B_1, B_2, 1, 1]) # [B, M, N, 1, 1]
+        r1 = tf.tile(r1, [1, 1, 1, self.config.sensors, 1]) # [B, M, N, sensors, 1]
+        r2 = tf.reshape(u_hat[..., 2], [B_0, B_1, B_2, 1, 1]) # [B, M, N, 1, 1]
+        r2 = tf.tile(r2, [1, 1, 1, self.config.sensors, 1]) # [B, M, N, sensors, 1]
+        r_curve = r0 + r1 * t * r2 * t**2 # [B, M, N, sensors, 1]
+        return r_curve # [B, M, N, sensors, 1]
     
 
 class ExponentialDecayRepresentor(BaseRepresentor):
@@ -131,9 +131,9 @@ class ExponentialDecayRepresentor(BaseRepresentor):
         B_1 = tf.shape(u_hat)[1]
         B_2 = tf.shape(u_hat)[2]
         T = self.eqn_config.T
-        s0 = tf.reshape(u_hat[..., 0], [B_0, B_1, B_2, 1, 1])
-        s0 = tf.tile(s0, [1, 1, 1, self.config.sensors, 1])
-        beta = tf.reshape(u_hat[..., 1], [B_0, B_1, B_2, 1, 1])
-        beta = tf.tile(beta, [1, 1, 1, self.config.sensors, 1])
+        s0 = tf.reshape(u_hat[..., 0], [B_0, B_1, B_2, 1, 1]) # [B, M, N, 1, 1]
+        s0 = tf.tile(s0, [1, 1, 1, self.config.sensors, 1]) # [B, M, N, sensors, 1]
+        beta = tf.reshape(u_hat[..., 1], [B_0, B_1, B_2, 1, 1]) # [B, M, N, 1, 1]
+        beta = tf.tile(beta, [1, 1, 1, self.config.sensors, 1]) # [B, M, N, sensors, 1]
         s_curve = s0 * tf.exp(beta * (t - T))
-        return s_curve
+        return s_curve # [B, M, N, 1, 1]
