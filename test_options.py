@@ -202,7 +202,6 @@ class TestlookbackOption(tf.test.TestCase):
         opt = LookbackOption(config)
         sde = GeometricBrownianMotion(config)
         u_hat = sde.sample_parameters(1)
-        dim = config.eqn_config.dim
         x, _ = sde.sde_simulation(u_hat, config.eqn_config.sample_size)
         x_m = opt.markovian_var(x)
         arg_x = tf.concat([x, x_m], axis=-1)
