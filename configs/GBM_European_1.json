@@ -25,12 +25,13 @@
 
     "net_config": {
         "pi": "false",
-        "branch_layers": [30, 30, 30],
-        "trunk_layers": [30, 30, 30],
-        "pi_layers": [30, 30, 30],
+        "branch_layer_sizes": [30, 30, 30],
+        "trunk_layer_sizes": [30, 30, 30],
+        "pi_layer_sizes": [30, 30, 30],
         "kernel_type": "dense",
-        "filters": 1,
-        "strides": 10,
+        "num_filters": 1,
+        "num_strides": 10,
+        "num_outputs": 6,
         "lr": 5e-3,
         "epochs": 10,
         "alpha": 1.0
