@@ -37,18 +37,14 @@ class ConstantRepresentor(BaseRepresentor):
         super(ConstantRepresentor, self).__init__(config)
         self.t_grid = tf.linspace(0.0, self.eqn_config.T, self.sensors)
 
-    def get_func_value(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
-        r"""
-        This method just do this thing: calculate the output tensor which calculated by:
-        f(t, x; c) = c,  c is the value which is same as that in u_hat with shape [B,M,N,1], 
-        then we hope the output has the shape [B,M,N,1] but the value is coherent with u_hat
-        The input tensor can be these two cases:
-        t: [B, M, 1] or [B, M, N, 1]
-        x: [B, M, d] or [B, M, N, d]
-        u_hat: [B, M, 1] or [B, M, N, 1] 
+    def get_sensor_value(self, u_hat: tf.Tensor) -> tf.Tensor:
         """
-        pass # TODO: make the calculation consistent
-
+        u_hat: [B, M, N, k]
+        return: [B, M, N, k * sensors]
+        """
+        u_curve = tf.tile(u_hat, [1, 1, 1, self.sensors, 1])
+        return u_curve
+    
     
 class QuadraticRepresentor(BaseRepresentor):
     r"""

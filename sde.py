@@ -33,6 +33,7 @@ class ItoProcessDriver(ABC):
         self.vol_init = self.config.vol_init
         self.range_list = []
         self.val_range_list = []
+        self.representor = ConstantRepresentor(config)
 
     def get_batch_size(self, u_hat: tf.Tensor):
         return tf.shape(u_hat)[0]
@@ -399,7 +400,7 @@ class GeometricBrownianMotion(ItoProcessDriver):
         u_curve: batch_size + (time_steps, num_curves), u_param = batch_size + (1)
         """
         u_curve = tf.expand_dims(u_hat[..., :2], axis=-2)
-        u_curve = tf.tile(u_curve, [1, 1, 1, self.config.sensors, 1])
+        u_curve = self.representor.get_sensor_value(u_curve)
         u_param = u_hat[..., 2:]
         return u_curve, u_param
 
@@ -777,11 +778,14 @@ class HestonModel(ItoProcessDriver):
         Then Then return is a tuple of two tensors: (u_curve, u_param)
         u_curve: batch_size + (time_steps, num_curves), u_param = batch_size + (3)
         """
-        B_0 = tf.shape(u_hat)[0]
-        B_1 = tf.shape(u_hat)[1]
-        B_2 = tf.shape(u_hat)[2]
-        u_curve = tf.reshape(u_hat[..., :2], [B_0, B_1, B_2, 1, 2])
-        u_curve = tf.tile(u_curve, [1, 1, 1, self.config.sensors, 1])
+        # B_0 = tf.shape(u_hat)[0]
+        # B_1 = tf.shape(u_hat)[1]
+        # B_2 = tf.shape(u_hat)[2]
+        # u_curve = tf.reshape(u_hat[..., :2], [B_0, B_1, B_2, 1, 2])
+        # u_curve = tf.tile(u_curve, [1, 1, 1, self.config.sensors, 1])
+
+        u_curve = tf.expand_dims(u_hat[..., :2], axis=-2)
+        u_curve = self.representor.get_sensor_value(u_curve)
         u_param = u_hat[..., 2:]
         return u_curve, u_param
 
@@ -883,7 +887,7 @@ class HullWhiteModel(ItoProcessDriver):
         u_curve: batch_size + (time_steps, num_curves), u_param = batch_size + (1)
         """
         u_curve = tf.expand_dims(u_hat[..., :3], axis=-2)
-        u_curve = tf.tile(u_curve, [1, 1, 1, self.config.sensors, 1])
+        u_curve = self.representor.get_sensor_value(u_curve)
         u_param = u_hat[..., 3:]
         return u_curve, u_param
 

@@ -50,6 +50,7 @@ class BlackScholesFormula(tf.keras.Model):
     def __init__(self, T: tf.Tensor):
         super(BlackScholesFormula, self).__init__()
         self.T = T
+        self.epsilon = 1e-6
 
     def call(self, inputs: Tuple[tf.Tensor], training=None) -> tf.Tensor:
         tfd = tfp.distributions
@@ -61,7 +62,7 @@ class BlackScholesFormula(tf.keras.Model):
         vol = tf.expand_dims(u_tensor[:, :, :, 1], -1)
         k = tf.expand_dims(u_tensor[:, :, :, 2], -1)
         d1 = (tf.math.log(x / k) + (r + vol**2 / 2) * (T - time_tensor)) / (
-            vol * tf.math.sqrt(T - time_tensor) + 0.000001
+            vol * tf.math.sqrt(T - time_tensor) + self.epsilon
         )
         d2 = d1 - vol * tf.math.sqrt(T - time_tensor)
         return x * dist.cdf(d1) - k * tf.exp(-r * (T - time_tensor)) * dist.cdf(d2)
@@ -242,8 +243,8 @@ class DeepKernelONetwithoutPI(DeepONet):
         Each has the dimension:
         t: batch_shape + (1)
         state: batch_shape + (dim_markov)
-        u_function: batch_shape + (time_steps, num_functions)
-        u_parameters: batch_shape + (num_parameters)
+        u_function: batch_shape + (num_sensors, num_functions)
+        u_parameters: batch_shape + (num_constants)
         """
         time_tensor, state_tensor, u_func, u_par = inputs
         latent_state = self.kernelop(u_func)
@@ -266,7 +267,7 @@ class DeepKernelONetwithPI(DeepONetwithPI):
         strides: Optional[int] = None,
     ):
         super(DeepKernelONetwithPI, self).__init__(
-            branch_layer, trunk_layer, pi_layer, num_assets
+            branch_layer, trunk_layer, pi_layer, num_assets, activation
         )
         if dense:
             self.kernelop = DenseOperator(num_outputs)
