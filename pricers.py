@@ -1,5 +1,5 @@
 import tensorflow as tf
-from function_space import DeepONet, DeepKernelONetwithPI, DeepKernelONetwithoutPI
+from function_space import DeepONet, DeepKernelONetwithPI, DeepKernelONetwithoutPI, BlackScholesFormula, ZeroCouponBondFormula
 from sde import HestonModel, ItoProcessDriver, HullWhiteModel
 from typing import Tuple
 from options import BaseOption
@@ -155,7 +155,7 @@ class BaseBSDEPricer(tf.keras.Model):
             return: the out put function value with shape [B, M, N, 1]
         """
         t, x, u_hat = inputs  # [B, M, N, 1], [B, M, N, d], [B, M, N, k]
-        if type(self.no_net) == DeepONet:
+        if type(self.no_net) == DeepONet or type(self.no_net) == BlackScholesFormula or type(self.no_net) == ZeroCouponBondFormula:
             y = self.no_net((t, x, u_hat))  # [B, M, N, 1]
         else:
             u_c, u_p = self.sde.split_uhat(u_hat)  # [B, M, N, k_1], [B, M, N, k_2]
@@ -421,7 +421,7 @@ class EuropeanPricer(MarkovianPricer):
         Same forward propagation as net_forward() but this is not trainable
         """
         t, x, u = inputs  # [B, M, N, 1], [B, M, N, d], [B, M, N, k]
-        if type(self.no_net_target) == DeepONet:
+        if type(self.no_net_target) == DeepONet or type(self.no_net) == BlackScholesFormula or type(self.no_net) == ZeroCouponBondFormula:
             y = self.no_net_target((t, x, u))  # [B, M, N, 1]
         else:
             u_c, u_p = self.sde.split_uhat(u)  # [B, M, N, k_1], [B, M, N, k_2]

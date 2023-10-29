@@ -859,7 +859,7 @@ class HullWhiteModel(ItoProcessDriver):
     ) -> tf.Tensor:
         """
         get \sigma(t,X) with shape (B,M,N,d)
-        in Heston \sigma(t,X) = (\sqrt(V_t) * X_t, vol_of_vol * \sqrt(V_t))
+        in Heston \sigma(t, X) = (\sqrt(V_t) * X_t, vol_of_vol * \sqrt(V_t))
         """
         assert state_tensor.shape[0] == u_hat.shape[0]
         vol_of_vol = tf.expand_dims(u_hat[..., 2], -1)  # [B, M, N, 1]

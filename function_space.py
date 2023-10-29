@@ -66,6 +66,31 @@ class BlackScholesFormula(tf.keras.Model):
         )
         d2 = d1 - vol * tf.math.sqrt(T - time_tensor)
         return x * dist.cdf(d1) - k * tf.exp(-r * (T - time_tensor)) * dist.cdf(d2)
+    
+class ZeroCouponBondFormula(tf.keras.Model):
+    r"""
+    This class is a model to implement zero coupon bond formula
+    """
+
+    def __init__(self, T: tf.Tensor):
+        super(ZeroCouponBondFormula, self).__init__()
+        self.T = T
+        self.epsilon = 1e-6
+
+    def call(self, inputs: Tuple[tf.Tensor], training=None) -> tf.Tensor:
+        time_tensor, state_tensor, u_tensor = inputs
+        x = state_tensor
+        T = self.T
+        kappa = tf.expand_dims(u_tensor[..., 0], axis=-1)
+        theta = tf.expand_dims(u_tensor[..., 1], axis=-1)
+        sigma = tf.expand_dims(u_tensor[..., 2], axis=-1)
+        B = (1 - tf.exp(-kappa * (T - time_tensor))) / kappa
+        A = tf.exp(
+            (B - T + time_tensor) * (kappa**2 * theta - sigma**2 / 2) / kappa**2
+            + (sigma * B) ** 2 / (4 * kappa)
+        )
+        p = A * tf.exp(-B * tf.reduce_sum(x, axis=-1, keepdims=True))
+        return p
 
 
 class DeepONet(tf.keras.Model):
