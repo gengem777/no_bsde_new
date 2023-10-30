@@ -16,6 +16,7 @@ option_list = [
     "BasketnoPI",
     "Swap",
     "Bond",
+    "Swaption",
     "TimeEuropean",
     "BermudanPut",
 ]
@@ -74,7 +75,6 @@ def create_dataset(
                 tf.TensorSpec(shape=(None, M, N + 1, None)),
             ),
         )
-        
 
     for element in gen_dataset.take(1):
         t, x, dw, u = element

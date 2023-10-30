@@ -1,5 +1,11 @@
 import tensorflow as tf
-from function_space import DeepONet, DeepKernelONetwithPI, DeepKernelONetwithoutPI, BlackScholesFormula, ZeroCouponBondFormula
+from function_space import (
+    DeepONet,
+    DeepKernelONetwithPI,
+    DeepKernelONetwithoutPI,
+    BlackScholesFormula,
+    ZeroCouponBondFormula,
+)
 from sde import HestonModel, ItoProcessDriver, HullWhiteModel
 from typing import Tuple
 from options import BaseOption
@@ -155,7 +161,11 @@ class BaseBSDEPricer(tf.keras.Model):
             return: the out put function value with shape [B, M, N, 1]
         """
         t, x, u_hat = inputs  # [B, M, N, 1], [B, M, N, d], [B, M, N, k]
-        if type(self.no_net) == DeepONet or type(self.no_net) == BlackScholesFormula or type(self.no_net) == ZeroCouponBondFormula:
+        if (
+            type(self.no_net) == DeepONet
+            or type(self.no_net) == BlackScholesFormula
+            or type(self.no_net) == ZeroCouponBondFormula
+        ):
             y = self.no_net((t, x, u_hat))  # [B, M, N, 1]
         else:
             u_c, u_p = self.sde.split_uhat(u_hat)  # [B, M, N, k_1], [B, M, N, k_2]
@@ -421,7 +431,11 @@ class EuropeanPricer(MarkovianPricer):
         Same forward propagation as net_forward() but this is not trainable
         """
         t, x, u = inputs  # [B, M, N, 1], [B, M, N, d], [B, M, N, k]
-        if type(self.no_net_target) == DeepONet or type(self.no_net) == BlackScholesFormula or type(self.no_net) == ZeroCouponBondFormula:
+        if (
+            type(self.no_net_target) == DeepONet
+            or type(self.no_net_target) == BlackScholesFormula
+            or type(self.no_net_target) == ZeroCouponBondFormula
+        ):
             y = self.no_net_target((t, x, u))  # [B, M, N, 1]
         else:
             u_c, u_p = self.sde.split_uhat(u)  # [B, M, N, k_1], [B, M, N, k_2]
@@ -440,10 +454,10 @@ class EuropeanPricer(MarkovianPricer):
             cont_value = tf.squeeze(
                 self.net_target_forward((t_last, x_last, u_last)), axis=2
             )
-            early_payoff = self.option.payoff(x, u_hat)
+            early_payoff = self.option.payoff(t, x, u_hat)
             payoff = tf.maximum(early_payoff, cont_value)
         else:
-            payoff = self.option.payoff(x, u_hat)
+            payoff = self.option.payoff(t, x, u_hat)
             cont = self.net_target_forward((t, x, u_hat))
         return payoff
 
@@ -460,23 +474,21 @@ class FixIncomeEuropeanPricer(EuropeanPricer):
         t_last = tf.expand_dims(t[:, :, -1, :], axis=2)  # (B, M, 1, 1)
         x_last = tf.expand_dims(x[:, :, -1, :], axis=2)  # (B, M, 1, 1)
         u_last = tf.expand_dims(u_hat[:, :, -1, :], axis=2)  # (B, M, 1, k)
-        if len(self.option.exer_dates) == 2:
-            payoff = self.option.payoff_inter(
-                t[:, :, -1, :], x[:, :, -1, :], u_hat[:, :, -1, :]
-            )
+        # if len(self.option.exer_dates) == 2:
+        #     payoff = self.option.payoff_inter(
+        #         t[:, :, -1, :], x[:, :, -1, :], u_hat[:, :, -1, :]
+        #     )
 
+        # else:
+        if self.num_of_time_intervals_for_early_exercise != 0:
+            cont_value = tf.squeeze(
+                self.net_target_forward((t_last, x_last, u_last)), axis=2
+            )  # (B, M, 1)
+            early_payoff = self.option.payoff_inter(t, x, u_hat)
+            payoff = tf.maximum(early_payoff, cont_value)
         else:
-            if self.num_of_time_intervals_for_early_exercise != 0:
-                cont_value = tf.squeeze(
-                    self.net_target_forward((t_last, x_last, u_last)), axis=2
-                )  # (B, M, 1)
-                early_payoff = self.option.payoff_inter(
-                    t[:, :, -1, :], x[:, :, -1, :], u_hat[:, :, -1, :]
-                )
-                payoff = tf.maximum(early_payoff, cont_value)
-            else:
-                payoff = self.option.payoff_at_maturity(t, x, u_hat)
-                cont = self.net_target_forward((t, x, u_hat))
+            payoff = self.option.payoff_at_maturity(t, x, u_hat)
+            cont = self.net_target_forward((t, x, u_hat))
         return payoff
 
 
@@ -611,6 +623,20 @@ class EarlyExercisePricer:
             sub_dataset = dataset.map(slice_fn)
         return sub_dataset
 
+    def call(self, inputs: Tuple[tf.Tensor]) -> tf.Tensor:
+        net_zero = self.no_nets[0]
+        t, x, u = inputs  # [B, M, N, 1], [B, M, N, d], [B, M, N, k]
+        if (
+            type(net_zero) == DeepONet
+            or type(net_zero) == BlackScholesFormula
+            or type(net_zero) == ZeroCouponBondFormula
+        ):
+            y = net_zero((t, x, u))  # [B, M, N, 1]
+        else:
+            u_c, u_p = self.sde.split_uhat(u)  # [B, M, N, k_1], [B, M, N, k_2]
+            y = net_zero((t, x, u_c, u_p))  # [B, M, N, 1]
+        return y
+
     def fit(self, data: tf.data.Dataset, epochs: int, checkpoint_path: str):
         """
         The total training pipeline and we finally attain the no_nets in each sub-time interval.
@@ -623,6 +649,7 @@ class EarlyExercisePricer:
             learning_rate=lr_schedule, epsilon=1e-6
         )  # set the optimizer of the European solver
         self.european_solver.compile(optimizer=optimizer)
+        self.european_solver.reset_round()
         for idx in reversed(range(1, len(self.exercise_index))):
             # construct data set from the original dataset
             path = checkpoint_path + f"{idx}"
@@ -632,13 +659,14 @@ class EarlyExercisePricer:
             )  # slice the dataset from the total dataset based on the time interval between two consecutive exercise dates
             self.european_solver.fit(
                 x=dataset, epochs=epochs
-            )  # training the operator in the corresponded idx-th sub-interval
+            )  # training the network in the corresponded idx-th sub-interval
             self.european_solver.no_net.save_weights(
                 path
             )  # save the weights in the  idx-th path
             self.european_solver.no_net_target.load_weights(
                 path
             )  # load the weights in the  idx-th path that means we initialize the weight for next task with the previous weight
+
             self.european_solver.step_to_next_round()  # move ahead the index of task
             print(f"===============end {idx} th interval============")
         self.european_solver.reset_round()  # reset the index of task to zero

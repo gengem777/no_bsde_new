@@ -807,10 +807,10 @@ class HullWhiteModel(ItoProcessDriver):
         self.kappa_range = self.config.kappa_range
         self.theta_range = self.config.theta_range
         self.sigma_range = self.config.sigma_range
-        self.range_list = [self.theta_range, self.kappa_range, self.sigma_range]
+        self.range_list = [self.kappa_range, self.theta_range,self.sigma_range]
         self.val_range_list = [
-            self.val_config.theta_range,
             self.val_config.kappa_range,
+            self.val_config.theta_range,
             self.val_config.sigma_range,
         ]
         self.epsilon = 0.01

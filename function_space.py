@@ -11,7 +11,7 @@ class DenseNet(tf.keras.Model):
 
     def __init__(self, num_layers: List[int], activation: Optional[str]):
         super(DenseNet, self).__init__()
-        # self.activation = activation
+        self.activation = activation
         self.bn_layers = [
             tf.keras.layers.BatchNormalization(
                 momentum=0.99,
@@ -37,9 +37,12 @@ class DenseNet(tf.keras.Model):
         for i in range(len(self.dense_layers)):
             x = self.bn_layers[i](x)
             x = self.dense_layers[i](x)
-            x = tf.nn.tanh(x)
+        # if self.activation is None:
+        out = x
+        # else:
+        # out = tf.nn.sigmoid(x)
         # x = self.dense_layers[-1](x)
-        return x
+        return out
 
 
 class BlackScholesFormula(tf.keras.Model):

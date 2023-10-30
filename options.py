@@ -508,10 +508,9 @@ class GeometricAsian(EuropeanOption):
         )
         return A  # [B, M, N, 1]
 
-
 class InterestRateSwap(BaseOption):
     """
-    This class implement the payoff and exact price of swap and Bermudan swaption.
+    This class implement the payoff and exact price of Interest rate swap.
     For testing issue, we just implement the simpliest version,
     where swaption just happen twice for three years.
     """
@@ -524,7 +523,7 @@ class InterestRateSwap(BaseOption):
         self.leg_dates = (
             self.config.leg_dates
         )  # a list with first element $T_0$ as the first
-        self.fix_rate = 0.01
+        self.fix_rate = self.config.strike
         self.sde = HullWhiteModel(config)
         self.notional = 1.0
         self.epsilon = 1e-3
@@ -614,8 +613,8 @@ class InterestRateSwap(BaseOption):
         This gives the value of a swaption which swap for 2 times at expiry date.
         It is written as the following form:
          v = 1 - K * P(1, 2) - (1 + K) * P(1, 3)
-        x: [B, M, 1] must corresponded to the time t_s
-        u_hat: [B, M, 1]
+        x: [B, M, N, 1] must corresponded to the time t_s
+        u_hat: [B, M, N, 1]
         return the value v: [B, M, 1]
         """
         p_12 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 2.0)
@@ -662,7 +661,7 @@ class InterestRateSwap(BaseOption):
         sigma = tf.expand_dims(u_hat[..., 2], axis=-1)
         B = (1 - tf.exp(-kappa * (t_e - t_s))) / kappa
         A = tf.exp(
-            (B - t_e + t_s) * (kappa**2 * theta - sigma**2 / 2) / kappa**2
+            (B - t_e + t_s) * (kappa**2 * theta - sigma**2 / 2) / (kappa**2)
             + (sigma * B) ** 2 / (4 * kappa)
         )
         p_se = A * tf.exp(-B * tf.reduce_sum(x, axis=-1, keepdims=True))
@@ -683,6 +682,12 @@ class InterestRateSwap(BaseOption):
         v = p_start - self.fix_rate * p_mid - (1.0 + self.fix_rate) * p_end
         return v
 
+class InterestRateSwaption(InterestRateSwap):
+    def __init__(self, config):
+        super(InterestRateSwaption, self).__init__(config)
+    
+    def payoff_at_maturity(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        return tf.nn.relu(super().payoff_at_maturity(t, x, u_hat))
 
 class ZeroCouponBond(BaseOption):
     def __init__(self, config):
