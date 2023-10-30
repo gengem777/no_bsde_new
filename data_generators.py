@@ -8,7 +8,8 @@ from options import (
     TimeEuropeanBasketOption,
     InterestRateSwap,
     ZeroCouponBond,
-    InterestRateSwaption,
+    InterestRateSwaptionFirst,
+    InterestRateSwaptionLast,
 )
 import math
 
@@ -20,7 +21,8 @@ european_list = [
     TimeEuropeanBasketOption,
     InterestRateSwap,
     ZeroCouponBond,
-    InterestRateSwaption,
+    InterestRateSwaptionFirst,
+    InterestRateSwaptionLast,
 ]
 
 

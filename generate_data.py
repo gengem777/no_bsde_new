@@ -17,6 +17,8 @@ option_list = [
     "Swap",
     "Bond",
     "Swaption",
+    "SwaptionFirst",
+    "SwaptionLast",
     "TimeEuropean",
     "BermudanPut",
 ]
@@ -88,9 +90,6 @@ def create_dataset(
     dataset = tf.data.Dataset.from_tensor_slices((t, x, dw, u))
     save_dir = f"./dataset/{sde_name}_{option_name}_{dim}_{N}"
     tf.data.experimental.save(dataset, save_dir)
-    print(dataset.element_spec)
-    # return dataset
-
 
 def save_dataset(dataset, path):
     tf.data.experimental.save(dataset, path)

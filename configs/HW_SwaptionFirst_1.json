@@ -1,8 +1,8 @@
 {
     "eqn_config": {
-        "_comment": "Interest Rate Bermudan Swaption",
+        "_comment": "Interest Rate Swaption",
         "sde_name": "HullWhiteModel",
-        "option_name": "InterestRateSwaption",
+        "option_name": "InterestRateSwaptionFirst",
         "solver_name": "EuropeanSolver",
         "exercise_date": [1.0, 2.0],
         "leg_dates": [1.0, 2.0, 3.0],

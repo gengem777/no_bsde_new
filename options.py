@@ -667,24 +667,28 @@ class InterestRateSwap(BaseOption):
         p_se = A * tf.exp(-B * tf.reduce_sum(x, axis=-1, keepdims=True))
         return p_se
 
-    def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
-        r"""
-        This yield the analytical value of the swap which will be swaped for twice:
-         v_t = p(t, 1) - K * p(t, 2) - (1.0 + K) * p(t, 3)
-        t: [B, M, N, 1]
-        x: [B, M, N, 1]
-        u_hat: [B, M, N, 4]
-        return: v: [B, M, N, 1]
-        """
-        p_start = self.zcp(t, x, u_hat, self.config.leg_dates[0])
-        p_mid = self.zcp(t, x, u_hat, self.config.leg_dates[1])
-        p_end = self.zcp(t, x, u_hat, self.config.leg_dates[-1])
-        v = p_start - self.fix_rate * p_mid - (1.0 + self.fix_rate) * p_end
-        return v
+    # def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+    #     r"""
+    #     This yield the analytical value of the swap which will be swaped for twice:
+    #      v_t = p(t, 1) - K * p(t, 2) - (1.0 + K) * p(t, 3)
+    #     t: [B, M, N, 1]
+    #     x: [B, M, N, 1]
+    #     u_hat: [B, M, N, 4]
+    #     return: v: [B, M, N, 1]
+    #     """
+    #     p_start = self.zcp(t, x, u_hat, self.config.leg_dates[0])
+    #     p_mid = self.zcp(t, x, u_hat, self.config.leg_dates[1])
+    #     p_end = self.zcp(t, x, u_hat, self.config.leg_dates[-1])
+    #     v = p_start - self.fix_rate * p_mid - (1.0 + self.fix_rate) * p_end
+    #     return v
 
-class InterestRateSwaption(InterestRateSwap):
+class InterestRateSwaptionLast(InterestRateSwap):
+    """
+    This class is for testing of Bermudan Swaption and this is just for the swaption value in the last 
+    exercise period
+    """
     def __init__(self, config):
-        super(InterestRateSwaption, self).__init__(config)
+        super(InterestRateSwaptionLast, self).__init__(config)
     
     def payoff_at_maturity(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         return tf.nn.relu(super().payoff_at_maturity(t, x, u_hat))
@@ -710,6 +714,55 @@ class InterestRateSwaption(InterestRateSwap):
         p_start = self.zcp(t, x, u_hat, self.config.leg_dates[1])
         p_end = self.zcp(t, x, u_hat, self.config.leg_dates[-1])
         v = p_start - (1.0 + self.fix_rate) * p_end
+        return v
+
+class InterestRateSwaptionFirst(InterestRateSwap):
+    """
+    This class is for testing of Bermudan Swaption and this is just for the swaption value in the first 
+    exercise period. We introduce three main methods in this class:
+    1. payoff = max(early exercise value, continuation value) where continuation value is given by analytical solution in the last time period.
+    2. payoff_intern  =  early exercise value. This method will be used in EuropeanPricer
+    3. exact_price: give the analytical value for the specified case when strike price is eliminated.
+    """
+    def __init__(self, config):
+        super(InterestRateSwaptionFirst, self).__init__(config)
+    
+    def payoff_at_maturity(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        return tf.nn.relu(super().payoff_at_maturity(t, x, u_hat))
+    
+    def payoff(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        """
+        In this specified case, we use the analytical continuation value in the last time interval
+        Then the max(early exercise value, continuation value) will play the role on the terminal payoff
+        """
+        p_12 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 2.0)
+        p_13 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 3.0)
+        early_exercise_value = 1.0 - self.fix_rate * p_12 - (1.0 + self.fix_rate) * p_13
+        continuation_value = p_12 - (1.0 + self.fix_rate) * p_13
+        return tf.maximum(early_exercise_value, continuation_value)
+    
+    def payoff_inter(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        """
+        This method will be used in FixIncomeEuropeanPricer to calculate the early exercise price (intermediate price)
+        """
+        p_12 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 2.0)
+        p_13 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 3.0)
+        value = 1.0 - self.fix_rate * p_12 - (1.0 + self.fix_rate) * p_13
+        return value
+    
+    def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        r"""
+        This yield the analytical value of the swap which will be swaped for twice:
+         v_t = p(t, 1) - K * p(t, 2) - (1.0 + K) * p(t, 3)
+        t: [B, M, N, 1]
+        x: [B, M, N, 1]
+        u_hat: [B, M, N, 4]
+        return: v: [B, M, N, 1]
+        """
+        p1 = self.zcp(t, x, u_hat, 1.0)
+        p2 = self.zcp(t, x, u_hat, 2.0)
+        p3 = self.zcp(t, x, u_hat, 3.0)
+        v = p1 - self.fix_rate * p2 - (1.0 + self.fix_rate) * p3
         return v
 
 class ZeroCouponBond(BaseOption):
