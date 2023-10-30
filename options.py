@@ -688,6 +688,15 @@ class InterestRateSwaption(InterestRateSwap):
     
     def payoff_at_maturity(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         return tf.nn.relu(super().payoff_at_maturity(t, x, u_hat))
+    
+    def payoff(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        p_23 = self.zcp(
+            self.config.leg_dates[1],
+            x[:, :, -1, :],
+            u_hat[:, :, -1, :],
+            self.config.leg_dates[-1],
+        )
+        return 1.0 - (1.0 + self.fix_rate) * p_23
 
 class ZeroCouponBond(BaseOption):
     def __init__(self, config):

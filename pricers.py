@@ -474,12 +474,6 @@ class FixIncomeEuropeanPricer(EuropeanPricer):
         t_last = tf.expand_dims(t[:, :, -1, :], axis=2)  # (B, M, 1, 1)
         x_last = tf.expand_dims(x[:, :, -1, :], axis=2)  # (B, M, 1, 1)
         u_last = tf.expand_dims(u_hat[:, :, -1, :], axis=2)  # (B, M, 1, k)
-        # if len(self.option.exer_dates) == 2:
-        #     payoff = self.option.payoff_inter(
-        #         t[:, :, -1, :], x[:, :, -1, :], u_hat[:, :, -1, :]
-        #     )
-
-        # else:
         if self.num_of_time_intervals_for_early_exercise != 0:
             cont_value = tf.squeeze(
                 self.net_target_forward((t_last, x_last, u_last)), axis=2
