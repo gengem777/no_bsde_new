@@ -35,6 +35,7 @@
         "num_filters": 4,
         "num_strides": 15,
         "num_outputs": 6,
+        "activation": "None",
         "lr": 5e-3,
         "epochs": 20,
         "alpha": 1.0
