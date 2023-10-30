@@ -93,4 +93,4 @@ def evaluate(y1, y_exact1):
 mean, std = evaluate(y1, y_exact1)
 assert mean <= 1e-1 
 assert std <= 1e-1 
-print("test end")
+print("test passed")
