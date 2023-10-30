@@ -619,7 +619,7 @@ class InterestRateSwap(BaseOption):
         """
         p_12 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 2.0)
         p_13 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 3.0)
-        return 1.0 - self.fix_rate * p_12 - (1.0 + self.fix_rate) * p_13
+        return 1.0 - self.fix_rate * p_12 - (1.0 + self.fix_rate) * p_13 # [B, M, 1]
 
     def payoff_at_maturity(
         self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor
@@ -637,8 +637,8 @@ class InterestRateSwap(BaseOption):
             x[:, :, -1, :],
             u_hat[:, :, -1, :],
             self.config.leg_dates[-1],
-        )
-        return 1.0 - (1.0 + self.fix_rate) * p_23
+        ) # [B, M, 1]
+        return 1.0 - (1.0 + self.fix_rate) * p_23 # [B, M, 1]
 
     def zcp(
         self, t_s: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor, t_e: tf.Tensor
@@ -656,31 +656,16 @@ class InterestRateSwap(BaseOption):
         However this can also enter 4-D tensors, but the dimension of x and u_hat and t_s and t_e (if it is also tensors)
         must be consistent!
         """
-        kappa = tf.expand_dims(u_hat[..., 0], axis=-1)
-        theta = tf.expand_dims(u_hat[..., 1], axis=-1)
-        sigma = tf.expand_dims(u_hat[..., 2], axis=-1)
+        kappa = tf.expand_dims(u_hat[..., 0], axis=-1) # [B, M, N, 1] or [B, M, 1]
+        theta = tf.expand_dims(u_hat[..., 1], axis=-1) # [B, M, N, 1] or [B, M, 1]
+        sigma = tf.expand_dims(u_hat[..., 2], axis=-1) # [B, M, N, 1] or [B, M, 1]
         B = (1 - tf.exp(-kappa * (t_e - t_s))) / kappa
         A = tf.exp(
             (B - t_e + t_s) * (kappa**2 * theta - sigma**2 / 2) / (kappa**2)
             + (sigma * B) ** 2 / (4 * kappa)
         )
         p_se = A * tf.exp(-B * tf.reduce_sum(x, axis=-1, keepdims=True))
-        return p_se
-
-    # def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
-    #     r"""
-    #     This yield the analytical value of the swap which will be swaped for twice:
-    #      v_t = p(t, 1) - K * p(t, 2) - (1.0 + K) * p(t, 3)
-    #     t: [B, M, N, 1]
-    #     x: [B, M, N, 1]
-    #     u_hat: [B, M, N, 4]
-    #     return: v: [B, M, N, 1]
-    #     """
-    #     p_start = self.zcp(t, x, u_hat, self.config.leg_dates[0])
-    #     p_mid = self.zcp(t, x, u_hat, self.config.leg_dates[1])
-    #     p_end = self.zcp(t, x, u_hat, self.config.leg_dates[-1])
-    #     v = p_start - self.fix_rate * p_mid - (1.0 + self.fix_rate) * p_end
-    #     return v
+        return p_se # [B, M, N, 1] or [B, M, 1]
 
 class InterestRateSwaptionLast(InterestRateSwap):
     """
@@ -699,8 +684,8 @@ class InterestRateSwaptionLast(InterestRateSwap):
             x[:, :, -1, :],
             u_hat[:, :, -1, :],
             self.config.leg_dates[-1],
-        )
-        return 1.0 - (1.0 + self.fix_rate) * p_23
+        ) # [B, M, 1]
+        return 1.0 - (1.0 + self.fix_rate) * p_23 # [B, M, 1]
     
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         r"""
@@ -711,10 +696,10 @@ class InterestRateSwaptionLast(InterestRateSwap):
         u_hat: [B, M, N, 4]
         return: v: [B, M, N, 1]
         """
-        p_start = self.zcp(t, x, u_hat, self.config.leg_dates[1])
-        p_end = self.zcp(t, x, u_hat, self.config.leg_dates[-1])
-        v = p_start - (1.0 + self.fix_rate) * p_end
-        return v
+        p_start = self.zcp(t, x, u_hat, self.config.leg_dates[1]) # [B, M, N, 1] 
+        p_end = self.zcp(t, x, u_hat, self.config.leg_dates[-1]) # [B, M, N, 1]
+        v = p_start - (1.0 + self.fix_rate) * p_end # [B, M, N, 1] 
+        return v # [B, M, N, 1] 
 
 class InterestRateSwaptionFirst(InterestRateSwap):
     """
@@ -735,11 +720,11 @@ class InterestRateSwaptionFirst(InterestRateSwap):
         In this specified case, we use the analytical continuation value in the last time interval
         Then the max(early exercise value, continuation value) will play the role on the terminal payoff
         """
-        p_12 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 2.0)
-        p_13 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 3.0)
-        early_exercise_value = 1.0 - self.fix_rate * p_12 - (1.0 + self.fix_rate) * p_13
-        continuation_value = p_12 - (1.0 + self.fix_rate) * p_13
-        return tf.maximum(early_exercise_value, continuation_value)
+        p_12 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 2.0) # [B, M, 1]
+        p_13 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 3.0) # [B, M, 1]
+        early_exercise_value = 1.0 - self.fix_rate * p_12 - (1.0 + self.fix_rate) * p_13 # [B, M, 1]
+        continuation_value = p_12 - (1.0 + self.fix_rate) * p_13 # [B, M, 1]
+        return tf.maximum(early_exercise_value, continuation_value) # [B, M, 1]
     
     def payoff_inter(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
@@ -747,8 +732,8 @@ class InterestRateSwaptionFirst(InterestRateSwap):
         """
         p_12 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 2.0)
         p_13 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 3.0)
-        value = 1.0 - self.fix_rate * p_12 - (1.0 + self.fix_rate) * p_13
-        return value
+        value = 1.0 - self.fix_rate * p_12 - (1.0 + self.fix_rate) * p_13 # [B, M, 1]
+        return value # [B, M, 1]
     
     def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         r"""
@@ -759,11 +744,11 @@ class InterestRateSwaptionFirst(InterestRateSwap):
         u_hat: [B, M, N, 4]
         return: v: [B, M, N, 1]
         """
-        p1 = self.zcp(t, x, u_hat, 1.0)
-        p2 = self.zcp(t, x, u_hat, 2.0)
-        p3 = self.zcp(t, x, u_hat, 3.0)
-        v = p1 - self.fix_rate * p2 - (1.0 + self.fix_rate) * p3
-        return v
+        p1 = self.zcp(t, x, u_hat, 1.0) # [B, M, N, 1] 
+        p2 = self.zcp(t, x, u_hat, 2.0) # [B, M, N, 1] 
+        p3 = self.zcp(t, x, u_hat, 3.0) # [B, M, N, 1] 
+        v = p1 - self.fix_rate * p2 - (1.0 + self.fix_rate) * p3 # [B, M, N, 1] 
+        return v # [B, M, N, 1] 
 
 class ZeroCouponBond(BaseOption):
     def __init__(self, config):
