@@ -697,6 +697,20 @@ class InterestRateSwaption(InterestRateSwap):
             self.config.leg_dates[-1],
         )
         return 1.0 - (1.0 + self.fix_rate) * p_23
+    
+    def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        r"""
+        This yield the analytical value of the swap which will be swaped for twice:
+         v_t = p(t, 1) - K * p(t, 2) - (1.0 + K) * p(t, 3)
+        t: [B, M, N, 1]
+        x: [B, M, N, 1]
+        u_hat: [B, M, N, 4]
+        return: v: [B, M, N, 1]
+        """
+        p_start = self.zcp(t, x, u_hat, self.config.leg_dates[1])
+        p_end = self.zcp(t, x, u_hat, self.config.leg_dates[-1])
+        v = p_start - (1.0 + self.fix_rate) * p_end
+        return v
 
 class ZeroCouponBond(BaseOption):
     def __init__(self, config):
