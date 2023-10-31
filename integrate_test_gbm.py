@@ -20,7 +20,7 @@ option_list = [
     "TimeEuropean",
     "BermudanPut",
 ]
-dim_list = [1, 3, 5, 10, 20]
+dim_list = [1, 3, 10]
 
 sde_name = "GBM"
 option_name = "European"
@@ -59,7 +59,7 @@ dataset = tf.data.experimental.load(
         tf.TensorSpec(shape=(samples, time_steps + 1, 1)),
         tf.TensorSpec(shape=(samples, time_steps + 1, dims)),
         tf.TensorSpec(shape=(samples, time_steps, dims)),
-        tf.TensorSpec(shape=(samples, time_steps + 1, 3)),
+        tf.TensorSpec(shape=(samples, time_steps + 1, 3)), # degree = 3
     ),
 )
 dataset = dataset.batch(config.eqn_config.batch_size)

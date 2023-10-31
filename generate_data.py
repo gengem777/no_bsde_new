@@ -3,9 +3,13 @@ import munch
 import tensorflow as tf
 import sde as eqn
 import options as opts
+from options import GeometricAsian, LookbackOption
 from data_generators import DiffusionModelGenerator
 
-
+path_dependent_list = [
+    GeometricAsian, 
+    LookbackOption,
+]
 sde_list = ["GBM", "TGBM", "SV", "HW", "SVJ"]
 option_list = [
     "European",
@@ -45,7 +49,7 @@ def create_dataset(
     config = munch.munchify(config)
     sde = getattr(eqn, config.eqn_config.sde_name)(config)
     option = getattr(opts, config.eqn_config.option_name)(config)
-
+    degree = config.eqn_config.degree
     data_generator = DiffusionModelGenerator(
         sde, config.eqn_config, option, num_of_batches
     )
@@ -57,7 +61,7 @@ def create_dataset(
     M = config.eqn_config.sample_size
     N = config.eqn_config.time_steps
     d = config.eqn_config.dim
-    if sde_name != "SV":
+    if sde_name != "SV" and type(option) not in path_dependent_list:
         gen_dataset = tf.data.Dataset.from_generator(
             gen_data_generator,
             output_signature=(
@@ -68,15 +72,26 @@ def create_dataset(
             ),
         )
     else:
-        gen_dataset = tf.data.Dataset.from_generator(
-            gen_data_generator,
-            output_signature=(
-                tf.TensorSpec(shape=(None, M, N + 1, 1)),
-                tf.TensorSpec(shape=(None, M, N + 1, 2 * d)),
-                tf.TensorSpec(shape=(None, M, N, 2 * d)),
-                tf.TensorSpec(shape=(None, M, N + 1, None)),
-            ),
-        )
+        if sde_name == "SV":
+            gen_dataset = tf.data.Dataset.from_generator(
+                gen_data_generator,
+                output_signature=(
+                    tf.TensorSpec(shape=(None, M, N + 1, 1)),
+                    tf.TensorSpec(shape=(None, M, N + 1, 2 * d)),
+                    tf.TensorSpec(shape=(None, M, N, 2 * d)),
+                    tf.TensorSpec(shape=(None, M, N + 1, None)),
+                ),
+            )
+        else:
+            gen_dataset = tf.data.Dataset.from_generator(
+                gen_data_generator,
+                output_signature=(
+                    tf.TensorSpec(shape=(None, M, N + 1, 1)),
+                    tf.TensorSpec(shape=(None, M, N + 1, 2 * d)),
+                    tf.TensorSpec(shape=(None, M, N, d)),
+                    tf.TensorSpec(shape=(None, M, N + 1, None)),
+                ),
+            )
 
     for element in gen_dataset.take(1):
         t, x, dw, u = element
@@ -90,6 +105,7 @@ def create_dataset(
     dataset = tf.data.Dataset.from_tensor_slices((t, x, dw, u))
     save_dir = f"./dataset/{sde_name}_{option_name}_{dim}_{N}"
     tf.data.experimental.save(dataset, save_dir)
+    print(dataset.element_spec)
 
 def save_dataset(dataset, path):
     tf.data.experimental.save(dataset, path)
