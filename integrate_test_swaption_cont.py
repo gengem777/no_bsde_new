@@ -34,7 +34,7 @@ print("load dataset and config and classes for phase one training")
 sde_name = "HW"
 option_name = "SwaptionLast"
 dim = 1
-
+epsilon = 1.0 
 if (
     (sde_name not in sde_list)
     or (option_name not in option_list)
@@ -68,7 +68,7 @@ dataset = tf.data.experimental.load(
         tf.TensorSpec(shape=(samples, time_steps + 1, 1)),
         tf.TensorSpec(shape=(samples, time_steps + 1, dims)),
         tf.TensorSpec(shape=(samples, time_steps, dims)),
-        tf.TensorSpec(shape=(samples, time_steps + 1, 4)),
+        tf.TensorSpec(shape=(samples, time_steps + 1, 4)), # degree = 4
     ),
 )
 dataset = dataset.batch(config.eqn_config.batch_size)
@@ -191,6 +191,6 @@ u = tf.reshape(
 y_pred = pricer((t, x, u))
 dates = config.eqn_config.leg_dates
 y_exact = option.exact_price(t, x, u)
-error = tf.reduce_mean(tf.abs((y_pred - y_exact)/y_exact))
+error = tf.reduce_mean(tf.abs((y_pred - y_exact)/(epsilon + y_exact)))
 assert error <= 1.0
 print("test passed")

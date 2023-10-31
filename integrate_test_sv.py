@@ -22,7 +22,7 @@ option_list = [
     "TimeEuropean",
     "BermudanPut",
 ]
-dim_list = [1, 3, 5, 10, 20]
+dim_list = [1, 3, 10]
 
 sde_name = "SV"
 option_name = "Swap"
@@ -61,7 +61,7 @@ dataset = tf.data.experimental.load(
         tf.TensorSpec(shape=(samples, time_steps + 1, 1)),
         tf.TensorSpec(shape=(samples, time_steps + 1, 2 * dims)),
         tf.TensorSpec(shape=(samples, time_steps, 2 * dims)),
-        tf.TensorSpec(shape=(samples, time_steps + 1, 6)),
+        tf.TensorSpec(shape=(samples, time_steps + 1, 6)), # degree = 6
     ),
 )
 dataset = dataset.batch(config.eqn_config.batch_size)

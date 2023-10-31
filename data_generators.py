@@ -9,9 +9,14 @@ from options import (
     InterestRateSwap,
     ZeroCouponBond,
     InterestRateSwaptionFirst,
-    InterestRateSwaptionLast,
+    InterestRateSwaptionLast, GeometricAsian, LookbackOption
 )
 import math
+
+path_dependent_list = [
+    GeometricAsian, 
+    LookbackOption,
+]
 
 european_list = [
     EuropeanOption,

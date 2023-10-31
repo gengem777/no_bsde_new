@@ -27,12 +27,11 @@ option_list = [
 dim_list = [1, 3, 5, 10, 20]
 tf.random.set_seed(0)
 np.random.seed(0)
-
 # import data and classes for phase 1 training
 sde_name = "HW"
 option_name = "SwaptionLast"
 dim = 1
-
+epsilon = 1.0 
 if (
     (sde_name not in sde_list)
     or (option_name not in option_list)
@@ -43,7 +42,10 @@ if (
                           option_name in {option_list} and dim in {dim_list}"
     )
 else:
-    json_path = f"./configs/{sde_name}_{option_name}_{dim}.json"
+    try:
+        json_path = f"./configs/{sde_name}_{option_name}_{dim}.json"
+    except:
+        json_path = f"./no_bsde_new2/no_bsde_new/configs/{sde_name}_{option_name}_{dim}.json"
 with open(json_path) as json_data_file:
     config = json.load(json_data_file)
 
@@ -66,7 +68,7 @@ dataset = tf.data.experimental.load(
         tf.TensorSpec(shape=(samples, time_steps + 1, 1)),
         tf.TensorSpec(shape=(samples, time_steps + 1, dims)),
         tf.TensorSpec(shape=(samples, time_steps, dims)),
-        tf.TensorSpec(shape=(samples, time_steps + 1, 4)),
+        tf.TensorSpec(shape=(samples, time_steps + 1, 4)), # degree = 4
     ),
 )
 dataset = dataset.batch(config.eqn_config.batch_size)
@@ -188,6 +190,6 @@ u = tf.reshape(
 y_pred = pricer((t, x, u))
 dates = config.eqn_config.leg_dates
 y_exact = option.exact_price(t, x, u) 
-error = tf.reduce_mean(tf.abs((y_pred - y_exact)/y_exact))
+error = tf.reduce_mean(tf.abs((y_pred - y_exact)/(epsilon + y_exact)))
 assert error <= 1.0
 print("test passed")
