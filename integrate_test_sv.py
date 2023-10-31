@@ -24,8 +24,8 @@ option_list = [
 ]
 dim_list = [1, 3, 5, 10, 20]
 
-sde_name = "HW"
-option_name = "Bond"
+sde_name = "SV"
+option_name = "Swap"
 dim = 1
 epsilon = 1.0 # corresponded to the paper in Berner 2020.
 
@@ -54,20 +54,20 @@ samples = config.eqn_config.sample_size
 time_steps = config.eqn_config.time_steps
 dims = config.eqn_config.dim
 dataset_path = f"./dataset/{sde_name}_{option_name}_{dim}_{time_steps}"
-create_dataset("HW", "Bond", 1, 50)
+create_dataset(sde_name, option_name, dim, 50)
 dataset = tf.data.experimental.load(
     dataset_path,
     element_spec=(
         tf.TensorSpec(shape=(samples, time_steps + 1, 1)),
-        tf.TensorSpec(shape=(samples, time_steps + 1, dims)),
-        tf.TensorSpec(shape=(samples, time_steps, dims)),
-        tf.TensorSpec(shape=(samples, time_steps + 1, 4)),
+        tf.TensorSpec(shape=(samples, time_steps + 1, 2 * dims)),
+        tf.TensorSpec(shape=(samples, time_steps, 2 * dims)),
+        tf.TensorSpec(shape=(samples, time_steps + 1, 6)),
     ),
 )
 dataset = dataset.batch(config.eqn_config.batch_size)
 test_dataset = dataset.take(10) 
 train_dataset = dataset.skip(10)
-checkpoint_path = f"./checkpoint/{sde_name}_{option_name}_{dim}_{time_steps}"
+checkpoint_path = f"./checkpoint/{sde_name}_{option_name}_{dim}"
 # initialize the solver and train
 pricer = MarkovianPricer(sde, option, config)
 lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
@@ -76,21 +76,22 @@ lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
 optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule, epsilon=1e-6)
 pricer.compile(optimizer=optimizer)
 # tf.config.run_functions_eagerly(True)
-pricer.fit(x=dataset, epochs=20)
+pricer.fit(x=dataset, epochs=10)
 pricer.no_net.save_weights(checkpoint_path)
 # split dataset
 for element in test_dataset.take(5):
     t, x, _, u_hat = element
 y_pred = pricer((t, x, u_hat))
 y_exact = option.exact_price(t, x, u_hat)
-y_pred, y_exact = y_pred.numpy(), y_exact.numpy()
+y1, y_exact1, t1, x1, u1 = y_pred.numpy(), y_exact.numpy(), t.numpy(), x.numpy(), u_hat.numpy()
 
-def evaluate(y1, y2):
+def evaluate(y1, y_exact1):
     idx=-1
-    t = (np.abs(y1[:,:,:idx] - y2[:,:,:idx]))/(epsilon + y2[:,:,:idx])
+    t = (np.abs(y1[:,:,:idx] - y_exact1[:,:,:idx]))/(epsilon + y_exact1[:,:,:idx])
     return np.mean(t), np.std(t)
 
-mean, std = evaluate(y_pred, y_exact)
+mean, std = evaluate(y1, y_exact1)
+print(mean)
 assert mean <= 1e-1 
 assert std <= 1e-1 
 print("test passed")

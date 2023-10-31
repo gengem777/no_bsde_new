@@ -77,7 +77,7 @@ lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
 optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule, epsilon=1e-6)
 pricer.compile(optimizer=optimizer)
 # tf.config.run_functions_eagerly(True)
-pricer.fit(x=dataset, epochs=100)
+pricer.fit(x=dataset, epochs=20)
 pricer.no_net.save_weights(checkpoint_path)
 # split dataset
 for element in test_dataset.take(5):
@@ -90,8 +90,9 @@ def evaluate(y1, y2):
     idx=-1
     t = (np.abs(y1[:,:,:idx] - y2[:,:,:idx]))/(epsilon + y2[:,:,:idx])
     return np.mean(t), np.std(t)
-
 mean, std = evaluate(y_pred, y_exact)
+print(mean)
 assert mean <= 0.1 
 assert std <= 0.1
 print("test passed")
+

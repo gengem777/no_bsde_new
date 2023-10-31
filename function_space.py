@@ -34,15 +34,16 @@ class DenseNet(tf.keras.Model):
 
     def call(self, x: tf.Tensor) -> tf.Tensor:
         """structure: bn -> (dense -> bn -> relu) * len(num_hiddens) -> dense"""
-        for i in range(len(self.dense_layers)):
-            x = self.bn_layers[i](x)
-            x = self.dense_layers[i](x)
-        # if self.activation is None:
-        out = x
-        # else:
-        # out = tf.nn.sigmoid(x)
-        # x = self.dense_layers[-1](x)
-        return out
+        if self.activation == "relu":
+            for i in range(len(self.dense_layers)):
+                x = self.bn_layers[i](x)
+                x = self.dense_layers[i](x)
+                x = tf.nn.relu(x)
+        else:
+            for i in range(len(self.dense_layers)):
+                x = self.bn_layers[i](x)
+                x = self.dense_layers[i](x)
+        return x
 
 
 class BlackScholesFormula(tf.keras.Model):

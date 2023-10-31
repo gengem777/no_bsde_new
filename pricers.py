@@ -83,7 +83,7 @@ class BaseBSDEPricer(tf.keras.Model):
         self.option = option
         self.sde = sde
         self.dim = self.eqn_config.dim  # dimension of assets
-        self.activation = None  # activation function of network
+        self.activation = self.net_config.activation  # activation function of network
         if self.net_config.pi == "true":
             if self.net_config.kernel_type == "dense":
                 self.no_net = DeepKernelONetwithPI(
