@@ -93,7 +93,7 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule, epsilon=1e-6)
 pricer.compile(optimizer=optimizer)
 # tf.config.run_functions_eagerly(True)
 print("phase1 training")
-pricer.fit(x=dataset, epochs=10)
+pricer.fit(x=dataset, epochs=20)
 pricer.no_net.save_weights(checkpoint_path)
 
 

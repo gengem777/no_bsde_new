@@ -90,7 +90,7 @@ lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
 optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule, epsilon=1e-6)
 pricer.compile(optimizer=optimizer)
 # tf.config.run_functions_eagerly(True)
-pricer.fit(x=dataset, epochs=10)
+pricer.fit(x=dataset, epochs=20)
 pricer.no_net.save_weights(checkpoint_path_last)
 
 # import data and classes for phase 2 training
@@ -149,7 +149,7 @@ train_dataset = sub_dataset.skip(10)
 checkpoint_path_first = f"./checkpoint2/HW_bermudan/{sde_name}_{option_name}_{dim}_1"
 # initialize the solver and train
 pricer = FixIncomeEuropeanPricer(sde, option, config)
-pricer.step_to_next_round() 
+pricer.step_to_next_round() # make sure we can use the max(cont, early_payoff) as the terminal condition
 pricer.no_net_target.load_weights(checkpoint_path_last)
 lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
     initial_learning_rate=config.net_config.lr, decay_steps=2000, decay_rate=0.9
@@ -187,8 +187,7 @@ u = tf.reshape(
 )
 y_pred = pricer((t, x, u))
 dates = config.eqn_config.leg_dates
-y_exact = option.zcp(t, x, u, 1) - option.zcp(t, x, u, 3)
+y_exact = option.exact_price(t, x, u) 
 error = tf.reduce_mean(tf.abs((y_pred - y_exact)/y_exact))
 assert error <= 1.0
-
 print("test passed")
