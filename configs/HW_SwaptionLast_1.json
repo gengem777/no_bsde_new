@@ -21,7 +21,8 @@
         "batch_size": 64,
         "sample_size":  50,
         "sensors": 10,
-        "initial_mode": "partial_fixed"
+        "initial_mode": "partial_fixed",
+        "degree": 4
     },
 
     "net_config": {
@@ -33,7 +34,7 @@
         "num_filters": 1,
         "num_strides": 10,
         "num_outputs": 6,
-        "activation": "softplus",
+        "activation": "None",
         "lr": 5e-3,
         "epochs": 3,
         "alpha": 1.0

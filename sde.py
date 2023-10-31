@@ -566,12 +566,12 @@ class TimeDependentGBM(GeometricBrownianMotion):
         Then Then return is a tuple of two tensors: (u_curve, u_param)
         u_curve: batch_size + (time_steps, num_curves), u_param = batch_size + (1)
         """
-        u_hat_r = u_hat[..., :2]
-        u_hat_s = u_hat[..., 2:4]
+        u_hat_r = u_hat[..., :3]
+        u_hat_s = u_hat[..., 3:5]
         r_curve = self.r_representor.get_sensor_value(u_hat_r)
         s_curve = self.s_representor.get_sensor_value(u_hat_s)
         u_curve = tf.concat([r_curve, s_curve], axis=-1)
-        u_param = u_hat[..., 4:]
+        u_param = u_hat[..., 5:]
         return u_curve, u_param
 
 

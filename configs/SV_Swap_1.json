@@ -22,7 +22,8 @@
         "batch_size": 200,
         "sample_size": 50,
         "sensors": 20,
-        "initial_mode": "partial_fixed"
+        "initial_mode": "partial_fixed",
+        "degree": 6
         
 
     },

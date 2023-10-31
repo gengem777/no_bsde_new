@@ -20,7 +20,8 @@
         "batch_size": 64,
         "sample_size":  100,
         "sensors": 10,
-        "initial_mode": "random"
+        "initial_mode": "random",
+        "degree": 4
     },
 
     "net_config": {
@@ -32,7 +33,7 @@
         "num_filters": 1,
         "num_strides": 10,
         "num_outputs": 6,
-        "activation": "softplus",
+        "activation": "relu",
         "lr": 1e-3,
         "epochs": 3,
         "alpha": 1.0
