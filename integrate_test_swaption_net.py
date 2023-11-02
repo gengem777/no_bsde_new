@@ -6,6 +6,8 @@ import sde as eqn
 import options as opts
 from pricers import EarlyExercisePricer, MarkovianPricer, FixIncomeEuropeanPricer
 from generate_data import create_dataset
+import global_constants as constants
+from utils import load_config
 
 # load config
 sde_list = ["GBM", "TGBM", "SV", "SVJ", "HW"]
@@ -32,23 +34,7 @@ sde_name = "HW"
 option_name = "SwaptionLast"
 dim = 1
 epsilon = 1.0 
-if (
-    (sde_name not in sde_list)
-    or (option_name not in option_list)
-    or (dim not in dim_list)
-):
-    raise ValueError(
-        f"please input right sde_name in {sde_list},\
-                          option_name in {option_list} and dim in {dim_list}"
-    )
-else:
-    try:
-        json_path = f"./configs/{sde_name}_{option_name}_{dim}.json"
-    except:
-        json_path = f"./no_bsde_new2/no_bsde_new/configs/{sde_name}_{option_name}_{dim}.json"
-with open(json_path) as json_data_file:
-    config = json.load(json_data_file)
-
+config = load_config(sde_name, option_name, dim)
 config = munch.munchify(config)
 initial_mode = config.eqn_config.initial_mode
 kernel_type = config.net_config.kernel_type
@@ -100,21 +86,7 @@ pricer.no_net.save_weights(checkpoint_path_last)
 sde_name = "HW"
 option_name = "SwaptionFirst"
 dim = 1
-
-if (
-    (sde_name not in sde_list)
-    or (option_name not in option_list)
-    or (dim not in dim_list)
-):
-    raise ValueError(
-        f"please input right sde_name in {sde_list},\
-                          option_name in {option_list} and dim in {dim_list}"
-    )
-else:
-    json_path = f"./configs/{sde_name}_{option_name}_{dim}.json"
-with open(json_path) as json_data_file:
-    config = json.load(json_data_file)
-
+config = load_config(sde_name, option_name, dim)
 config = munch.munchify(config)
 initial_mode = config.eqn_config.initial_mode
 kernel_type = config.net_config.kernel_type
@@ -158,7 +130,7 @@ lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
 )
 optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule, epsilon=1e-6)
 pricer.compile(optimizer=optimizer)
-# tf.config.run_functions_eagerly(True)
+tf.config.run_functions_eagerly(True)
 pricer.fit(x=dataset, epochs=20)
 pricer.no_net.save_weights(checkpoint_path_first)
 
@@ -192,4 +164,5 @@ dates = config.eqn_config.leg_dates
 y_exact = option.exact_price(t, x, u) 
 error = tf.reduce_mean(tf.abs((y_pred - y_exact)/(epsilon + y_exact)))
 assert error <= 1.0
+print(y_pred, y_exact)
 print("test passed")

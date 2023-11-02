@@ -2,47 +2,20 @@ import tensorflow as tf
 import numpy as np
 from pricers import MarkovianPricer
 from generate_data import create_dataset
+import global_constants as constants
 import json
 import munch
 import sde as eqn
 import options as opts
+from utils import load_config
 
 
 # load config
-sde_list = ["GBM", "TGBM", "SV", "HW", "SVJ"]
-option_list = [
-    "European",
-    "EuropeanPut",
-    "Lookback",
-    "Asian",
-    "Basket",
-    "BasketnoPI",
-    "Swap",
-    "Bond",
-    "TimeEuropean",
-    "BermudanPut",
-]
-dim_list = [1, 3, 10]
-
 sde_name = "SV"
 option_name = "Swap"
 dim = 1
 epsilon = 1.0 # corresponded to the paper in Berner 2020.
-
-if (
-    (sde_name not in sde_list)
-    or (option_name not in option_list)
-    or (dim not in dim_list)
-):
-    raise ValueError(
-        f"please input right sde_name in {sde_list},\
-                          option_name in {option_list} and dim in {dim_list}"
-    )
-else:
-    json_path = f"./configs/{sde_name}_{option_name}_{dim}.json"
-with open(json_path) as json_data_file:
-    config = json.load(json_data_file)
-
+config = load_config(sde_name, option_name, dim)
 config = munch.munchify(config)
 initial_mode = config.eqn_config.initial_mode
 kernel_type = config.net_config.kernel_type
