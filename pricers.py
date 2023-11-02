@@ -6,7 +6,7 @@ from function_space import (
     BlackScholesFormula,
     ZeroCouponBondFormula,
 )
-from sde import HestonModel, ItoProcessDriver, HullWhiteModel
+from sde import HestonModel, ItoProcess, HullWhiteModel
 from typing import Tuple
 from options import BaseOption
 
@@ -193,9 +193,7 @@ class BaseBSDEPricer(tf.keras.Model):
         loss_interior, loss_tml = self.loss_interior(
             data, training
         ), self.loss_terminal(data, training)
-        loss = self.alpha * self.loss_interior(data, training) + self.loss_terminal(
-            data, training
-        )
+        loss = self.alpha * loss_interior + loss_tml
         return loss, loss_interior, loss_tml
 
     @tf.function
@@ -482,7 +480,6 @@ class FixIncomeEuropeanPricer(EuropeanPricer):
             payoff = tf.maximum(early_payoff, cont_value)
         else:
             payoff = self.option.payoff_at_maturity(t, x, u_hat)
-            cont = self.net_target_forward((t, x, u_hat))
         return payoff
 
 
@@ -492,13 +489,14 @@ class EarlyExercisePricer:
     recursively with the class EuropeanSolver. Then this class gives a pipeline of training process
     """
 
-    def __init__(self, sde: ItoProcessDriver, option: BaseOption, config):
+    def __init__(self, sde: ItoProcess, option: BaseOption, config):
         self.sde = sde
-        if isinstance(self.sde, HullWhiteModel):
-            self.european_solver = FixIncomeEuropeanPricer(sde, option, config)
-        else:
-            self.european_solver = EuropeanPricer(sde, option, config)
         self.option = option
+        self.config = config
+        if isinstance(self.sde, HullWhiteModel):
+            self.european_solver = FixIncomeEuropeanPricer(self.sde, self.option, self.config)
+        else:
+            self.european_solver = EuropeanPricer(self.sde, self.option, self.config)
         self.eqn_config = config.eqn_config  # config of the model
         self.net_config = config.net_config  # config of the network
         self.dim = self.eqn_config.dim  # num of assets
@@ -566,7 +564,6 @@ class EarlyExercisePricer:
         self.optimizer = tf.keras.optimizers.Adam(
             learning_rate=lr_schedule, epsilon=1e-6
         )  # set the optimizer of the European solver
-        self.european_solver.compile(optimizer=self.optimizer)
 
     def slice_dataset(self, dataset: tf.data.Dataset, idx: int):
         r"""
@@ -636,13 +633,12 @@ class EarlyExercisePricer:
         The total training pipeline and we finally attain the no_nets in each sub-time interval.
         """
         # learning_rate = self.net_config.lr
-        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
-            initial_learning_rate=self.net_config.lr, decay_steps=200, decay_rate=0.9
-        )
-        optimizer = tf.keras.optimizers.Adam(
-            learning_rate=lr_schedule, epsilon=1e-6
-        )  # set the optimizer of the European solver
-        self.european_solver.compile(optimizer=optimizer)
+        # lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+        #     initial_learning_rate=self.net_config.lr, decay_steps=200, decay_rate=0.9
+        # )
+        # optimizer = tf.keras.optimizers.Adam(
+        #     learning_rate=lr_schedule, epsilon=1e-6
+          # set the optimizer of the European solver
         self.european_solver.reset_round()
         for idx in reversed(range(1, len(self.exercise_index))):
             # construct data set from the original dataset
@@ -651,17 +647,32 @@ class EarlyExercisePricer:
             dataset = self.slice_dataset(
                 data, idx
             )  # slice the dataset from the total dataset based on the time interval between two consecutive exercise dates
+            # if isinstance(self.sde, HullWhiteModel):
+            #     self.european_solver = FixIncomeEuropeanPricer(self.sde, self.option, self.config)
+            # else:
+            #     self.european_solver = EuropeanPricer(self.sde, self.option, self.config)
+            self.european_solver.compile(optimizer=self.optimizer)
+            # if idx == len(self.exercise_index) + 1:
+            #     self.european_solver.reset_round()
+            # else:
+            #     self.european_solver.step_to_next_round() 
+            #     self.european_solver.no_net_target.load_weights(
+            #     path
+            # )
             self.european_solver.fit(
                 x=dataset, epochs=epochs
             )  # training the network in the corresponded idx-th sub-interval
             self.european_solver.no_net.save_weights(
                 path
             )  # save the weights in the  idx-th path
+            # self.european_solver.no_net_target.load_weights(
+            #     path
+            # )  # load the weights in the  idx-th path that means we initialize the weight for next task with the previous weight
+            # move ahead the index of task
             self.european_solver.no_net_target.load_weights(
                 path
-            )  # load the weights in the  idx-th path that means we initialize the weight for next task with the previous weight
-
-            self.european_solver.step_to_next_round()  # move ahead the index of task
+            )
+            self.european_solver.step_to_next_round() 
             print(f"===============end {idx} th interval============")
         self.european_solver.reset_round()  # reset the index of task to zero
         print("---end---")
