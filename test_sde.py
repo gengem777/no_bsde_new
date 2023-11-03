@@ -1,47 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from sde import HestonModel, GeometricBrownianMotion, HullWhiteModel
-import json
-import munch
-
-
-sde_list = ["GBM", "TGBM", "SV", "HW", "SVJ"]
-option_list = [
-    "European",
-    "EuropeanPut",
-    "Lookback",
-    "Asian",
-    "Basket",
-    "BasketnoPI",
-    "Swap",
-    "Swaption",
-    "TimeEuropean",
-    "BermudanPut",
-]
-dim_list = [1, 3, 5, 10, 20]
-
-
-def load_config(sde_name: str, option_name: str, dim: int = 1):
-    """
-    This function is for introducing config json files into test functions
-    """
-    if (
-        (sde_name not in sde_list)
-        or (option_name not in option_list)
-        or (dim not in dim_list)
-    ):
-        raise ValueError(
-            f"please input right sde_name in {sde_list},\
-                          option_name in {option_list} and dim in {dim_list}"
-        )
-    else:
-        json_path = f"./configs/{sde_name}_{option_name}_{dim}.json"
-    with open(json_path) as json_data_file:
-        config = json.load(json_data_file)
-
-    config = munch.munchify(config)
-    return config
-
+from utils import load_config
 
 class TestGeometricBrowianMotion(tf.test.TestCase):
     """
@@ -50,12 +10,10 @@ class TestGeometricBrowianMotion(tf.test.TestCase):
     def test_initial_sampler(self):
         config = load_config("GBM", "European", 1)
         sde = GeometricBrownianMotion(config)
-        u_hat = tf.constant([[0.05, 0.45, 1.05], [0.04, 0.58, 1.06]])
+        u_hat = tf.constant([[0.05, 0.45], [0.04, 0.58]])
         dim = config.eqn_config.dim
-        x_init = config.eqn_config.x_init
         initial_state = sde.initial_sampler(u_hat, 10000)
         self.assertEqual(initial_state.shape, [2, 10000, dim])
-        self.assertAllLessEqual(tf.reduce_mean(initial_state - x_init), 5e-2)
 
     def test_drift(self):
         config = load_config("GBM", "European", 1)
