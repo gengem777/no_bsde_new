@@ -19,13 +19,16 @@ class ItoJumpProcess(ItoProcess):
         2. simulate the path and output path tensor with Brownian motion increment tensor and jump increment
     The class ItoProcessDriven implements common methods for sampling from the solution to this SDE,
     """
+
     def __init__(self, config):
-        super(ItoJumpProcess,self).__init__(config)
+        super(ItoJumpProcess, self).__init__(config)
         self.range_list = []
         self.jump_sizes = self.config.jump_size_list
         self.jump_probs = self.config.probs_list
-    
-    def jump_happen(self, state: tf.Tensor, intensity: tf.Tensor, samples: int) -> tf.Tensor:
+
+    def jump_happen(
+        self, state: tf.Tensor, intensity: tf.Tensor, samples: int
+    ) -> tf.Tensor:
         """
         This give a {0, 1} variable to tell us whether the certain time point has the jump.
         state: [B, M, d]
@@ -33,10 +36,10 @@ class ItoJumpProcess(ItoProcess):
         return: [B, M, d] -> {0, 1} variable to indicate the happening of jump event
         """
         actual_dim = tf.shape(state)[-1]
-        dist = tfp.distributions.Bernoulli(probs = intensity * self.config.dt)
-        happen = tf.transpose(dist.sample([samples, actual_dim]), perm = [2, 0, 1])
+        dist = tfp.distributions.Bernoulli(probs=intensity * self.config.dt)
+        happen = tf.transpose(dist.sample([samples, actual_dim]), perm=[2, 0, 1])
         return tf.cast(happen, tf.float32)
-    
+
     def get_intensity(self, u_hat: tf.Tensor) -> tf.Tensor:
         """
         from [B, k] shape parameters to get the intensity [B, ]
@@ -44,51 +47,56 @@ class ItoJumpProcess(ItoProcess):
         """
         raise NotImplementedError
 
-
     def jump_size(self, state: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
         This give the relative jump size z where z is the Bernoulli distribution in the case in base class
         This distribution is a discretized distribution:
-        values: list 
-        probs: list 
+        values: list
+        probs: list
+        state: [B, M, d]
+        return: [B, M, d]
         """
-        raise NotImplementedError
-    
+        dist = tfp.distributions.FiniteDiscrete(self.jump_sizes, probs=self.jump_probs)
+        z = dist.sample(tf.shape(state))
+        return z
+
     def compensate_expectation(self, state: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         r"""
         Since In jump diffusion, we need compensate jump so that the process can be a martingale
-        Then we calculate it here, which is \int \Gamma(S_t, z) v(dz), where v(dz) = \lambda * f(dz), 
+        Then we calculate it here, which is \int \Gamma(S_t, z) v(dz), where v(dz) = \lambda * f(dz),
         where f(dz) is the law of the jump size.
         """
-        expectation = sum((tf.exp(i[0]) - 1.0) * i[1] for i in zip(self.jump_sizes, self.jump_probs))
-        intensity = tf.reshape(self.get_intensity(u_hat), [-1, 1, 1]) #[B, 1]
-        samples = tf.shape(state)[1] # M
-        intensity = tf.tile(intensity, [1, samples, 1]) # [B, M, 1]
+        expectation = sum(
+            (tf.exp(z) - 1.0) * p for (z, p) in zip(self.jump_sizes, self.jump_probs)
+        )
+        intensity = tf.reshape(self.get_intensity(u_hat), [-1, 1, 1])  # [B, 1]
+        samples = tf.shape(state)[1]  # M
+        intensity = tf.tile(intensity, [1, samples, 1])  # [B, M, 1]
         compensate_exp = expectation * intensity
-        return compensate_exp * state # l * E[e^z - 1] * S
-    
+        return compensate_exp * state  # l * E[e^z - 1] * S
+
     def pure_jump(self, state: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
         happen * (e^z - 1)
         """
-        intensity = self.get_intensity(u_hat) # [B,]
-        samples = tf.shape(state)[1] # M
-        happen = self.jump_happen(state, intensity, samples) # [B, M, 1]
-        z = self.jump_size(state, u_hat) # [B, M, 1]
-        pure_jump_noise = happen * (tf.exp(z) - 1.0) # [B, M, 1]
-        return pure_jump_noise * state # Y * (e^z - 1) * S
+        intensity = self.get_intensity(u_hat)  # [B,]
+        samples = tf.shape(state)[1]  # M
+        happen = self.jump_happen(state, intensity, samples)  # [B, M, 1]
+        z = self.jump_size(state, u_hat)  # [B, M, 1]
+        pure_jump_noise = happen * (tf.exp(z) - 1.0)  # [B, M, 1]
+        return pure_jump_noise * state  # Y * (e^z - 1) * S
 
     def compensate_jump(self, state: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
-        jump = self.pure_jump(state, u_hat) 
+        jump = self.pure_jump(state, u_hat)
         expect = self.compensate_expectation(state, u_hat) * self.config.dt
         return jump - expect
-    
+
     def euler_maryama_step(self, time: tf.Tensor, state: tf.Tensor, u_hat: tf.Tensor):
         """
         We extraly calculate the jump term happen * (e^z - 1) * S_t
         return the tuple: S_{t + dt}: [B, M, d], dW_{t+dt} - dW_t: [B, M, d], happen * (e^z - 1) = jump_noise: [B, M, d]
         """
-        newstate_without_jump, noise =  super().euler_maryama_step(time, state, u_hat)
+        newstate_without_jump, noise = super().euler_maryama_step(time, state, u_hat)
         intensity = self.get_intensity(u_hat)
         samples = tf.shape(state)[1]
         happen = self.jump_happen(state, intensity, samples)
@@ -96,7 +104,7 @@ class ItoJumpProcess(ItoProcess):
         jump_increment = self.compensate_jump(state, u_hat)
         new_state = newstate_without_jump + jump_increment
         return new_state, noise, happen, z
-    
+
     def sde_simulation(self, u_hat: tf.Tensor, samples: int):
         """
         the whole simulation process with each step iterated by method euler_maryama_step(),
@@ -135,8 +143,14 @@ class ItoJumpProcess(ItoProcess):
         dw = tf.transpose(dw, perm=[1, 2, 0, 3])
         h = tf.transpose(h, perm=[1, 2, 0, 3])
         z = tf.transpose(z, perm=[1, 2, 0, 3])
-        return x, dw, h, z  # [B, M, N, d], [B, M, N-1, d], [B, M, N-1, d], [B, M, N-1, d]
-    
+        return (
+            x,
+            dw,
+            h,
+            z,
+        )  # [B, M, N, d], [B, M, N-1, d], [B, M, N-1, d], [B, M, N-1, d]
+
+
 class GBMwithSimpleJump(ItoJumpProcess):
     """
     A subclass of ItoProcess, MertonJumpDiffusionProcess under Q measure, mainly for testing.
@@ -152,6 +166,7 @@ class GBMwithSimpleJump(ItoJumpProcess):
     whose shape is (num_batch, dim_param = 2) \mu and \sigma
     one parameter correspond to num_sample paths
     """
+
     def __init__(self, config):
         super().__init__(config)
         self.config = config.eqn_config
@@ -161,18 +176,19 @@ class GBMwithSimpleJump(ItoJumpProcess):
         self.s_range = self.config.s_range
         self.lambda_range = self.config.lambda_range
         self.range_list = [self.r_range, self.s_range, self.lambda_range]
-        self.val_range_list = [self.val_config.r_range, self.val_config.s_range, self.config.lambda_range]
-        self.range_list = []
-        self.val_range_list = []
+        self.val_range_list = [
+            self.val_config.r_range,
+            self.val_config.s_range,
+            self.config.lambda_range,
+        ]
         self.representor = ConstantRepresentor(config)
-    
+
     def get_intensity(self, u_hat: tf.Tensor) -> tf.Tensor:
         """
         from [B, k] shape parameters to get the intensity [B, ]
         return [B, ]
         """
         return u_hat[:, 2]
-
 
     def jump_size(self, state: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
         """
@@ -181,7 +197,7 @@ class GBMwithSimpleJump(ItoJumpProcess):
         dist = tfp.distributions.FiniteDiscrete(self.jump_sizes, probs=self.jump_probs)
         z = dist.sample(tf.shape(state))
         return z
-    
+
     def diffusion(
         self, time: tf.Tensor, state: tf.Tensor, u_hat: tf.Tensor
     ) -> tf.Tensor:
@@ -209,7 +225,7 @@ class GBMwithSimpleJump(ItoJumpProcess):
         return tf.einsum(
             "...ij,...j->...i", sigma, state
         )  # [B, M, d, d] x [B, M, d] -> [B, M, d]
-    
+
     def corr_matrix(self, state: tf.Tensor, u_hat: tf.Tensor):
         r"""
         In this class the corr is j:
@@ -236,7 +252,7 @@ class GBMwithSimpleJump(ItoJumpProcess):
                 state, u_hat
             )  # [B, M, d, d]
         return corr  # [B, M, d, d]
-    
+
     def diffusion_onestep(
         self, time_tensor: tf.Tensor, state_tensor: tf.Tensor, u_hat: tf.Tensor
     ):
@@ -271,7 +287,10 @@ class GBMwithSimpleJump(ItoJumpProcess):
         r = tf.expand_dims(u_hat[..., 0], -1)  # [B, M, N, 1]
         v = tf.expand_dims(u_hat[..., 1], -1)  # [B, M, N, 1]
         state_tensor_after_step = (
-            state_tensor + r * state_tensor * self.config.dt + v * state_tensor * dw + d_jump * state_tensor
+            state_tensor
+            + r * state_tensor * self.config.dt
+            + v * state_tensor * dw
+            + d_jump * state_tensor
         )
         return state_tensor_after_step  # [B, M, N, d]
 
@@ -288,5 +307,3 @@ class GBMwithSimpleJump(ItoJumpProcess):
         u_curve = self.representor.get_sensor_value(u_curve)
         u_param = u_hat[..., 3:]
         return u_curve, u_param
-
-

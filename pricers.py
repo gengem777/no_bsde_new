@@ -5,10 +5,18 @@ from function_space import (
     DeepKernelONetwithoutPI,
     BlackScholesFormula,
     ZeroCouponBondFormula,
+    EquitySwapFormula,
 )
 from sde import HestonModel, ItoProcess, HullWhiteModel
+from sde_jump import ItoJumpProcess
 from typing import Tuple
 from options import BaseOption
+
+ANA_LIST = [
+    BlackScholesFormula,
+    ZeroCouponBondFormula,
+    EquitySwapFormula,
+]
 
 
 class BaseBSDEPricer(tf.keras.Model):
@@ -162,9 +170,7 @@ class BaseBSDEPricer(tf.keras.Model):
         """
         t, x, u_hat = inputs  # [B, M, N, 1], [B, M, N, d], [B, M, N, k]
         if (
-            type(self.no_net) == DeepONet
-            or type(self.no_net) == BlackScholesFormula
-            or type(self.no_net) == ZeroCouponBondFormula
+            type(self.no_net) in ANA_LIST
         ):
             y = self.no_net((t, x, u_hat))  # [B, M, N, 1]
         else:
@@ -215,6 +221,7 @@ class BaseBSDEPricer(tf.keras.Model):
         grad: tf.Tensor,
         dw: tf.Tensor,
         u_hat: tf.Tensor,
+        **kwargs,
     ) -> tf.Tensor:
         """
         the diffusion erm of the BSDE, which is determined by the SDE
@@ -370,6 +377,138 @@ class MarkovianPricer(BaseBSDEPricer):
         return payoff
 
 
+class PureJumpPricer(MarkovianPricer):
+    """
+    This is the class to construct the tain step of the BSDE loss function with jump, this jump diffusion model has the
+    jump size which has a discrete distribution with K sample points, the data is generated from three
+    external classes: the sde class which yield the data of input parameters. the option class which yields the
+    input function data and give the payoff function and exact option price.
+    """
+
+    def __init__(self, sde: ItoJumpProcess, option, config):
+        super(PureJumpPricer, self).__init__(sde, option, config)
+        self.jump_size = config.eqn_config.jump_size_list  # [K, 1]
+        self.probs = config.eqn_config.probs_list
+
+    def expect_value(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        r"""
+        this is to calculate \sum_k^K (u(t, S*e^z_{k})) * prob(x = z_{k} = \int u(t, S*e^z) f(dz)
+        where v(dz) = \lambda * f(dz)
+        """
+        return sum(
+            self((t, x * tf.exp(z_i), u_hat)) * p_i
+            for (z_i, p_i) in zip(self.jump_size, self.probs)
+        )
+
+    def loss_interior(self, data: Tuple[tf.Tensor], training=None) -> tf.Tensor:
+        r"""
+        In this method, f is the no_net output value of t, x, u on the time horizon from 0 to T.
+        f_now: the no_net output value of t, x, u on the time horizon from 0 to T-1, with shape [B, M, T-1, 1];
+        f_pls: the no_net output value of t, x, u on the time horizon from 1 to T, with shape [B, M, T-1, 1];
+        other variables is calculated based on these two variables
+
+        This loss function give the BSDE loss through the time interval [T_0, T_1] and we let T_0 = 0, T-1 = T
+        We first calculate the loss evaluated at each time point and the sum up.
+        For a certain time point t_i, the loss is:
+        l_i(y_i +\sum_{j=i}^N driver_bsde(t_j, X_j, y_j, z_j, u_hat) * dt + z_j * dW_j + u_j  - g(T, X_T, u_hat)) ** 2, where:
+        y_i = no_net(t_j, X_j, u_hat) and z_i = sde.diffusion_onestep(t_i, X_i, u_hat) * \nabla y_i
+        u_j = Y * (u(t, S*e^z) - u(t, S)) - \lambda * \sum_k^K (u(t, S*e^z_{k}) - u(t, S)) * prob(x = z_{k}) * dt
+        which is given by the jump_diffusion_bsde method
+        Then the tital loss is: \sum_{i=0}^Nl_i.
+
+        :param t: time B x M x (T-1) x 1
+        :param x: state B x M x (T-1) x D
+        :param  u: B x K ->(repeat) B x M x (T-1) x K
+        :return: value (B, M, (T-1), 1), gradient_x (B, M, (T-1), D)
+        """
+        (
+            t,
+            x,
+            dw,
+            h,
+            z,
+            u_hat,
+        ) = data  # [B, M, N, 1], [B, M, N, d], [B, M, N-1, d], [B, M, N, k]
+        steps = self.eqn_config.time_steps
+        loss_interior = 0.0
+        u_before = u_hat[:, :, :-1, :]  # [B, M, N-1, k]
+        x_before = x[:, :, :-1, :]  # [B, M, N-1, d]
+        t_before = t[:, :, :-1, :]  # [B, M, N-1, 1]
+        f = self((t, x, u_hat))  # [B, M, N, 1]
+        grad = self.get_gradient((t, x, u_hat))
+        f_before = f[:, :, :-1, :]  # [B, M, N-1, 1]
+        f_before_then_jump = self((t_before, x_before * tf.exp(z), u_before))
+        f_before_then_jump_mean = self.expect_value(t_before, x_before, u_before)
+        f_after = f[:, :, 1:, :]  # [B, M, N-1, 1]
+        grad = grad[:, :, :-1, :]  # [B, M, N-1, d]
+        for n in range(steps - 1):
+            V_pls = f_after[:, :, n:, :]  # [B, M, N-n, 1]
+            V_now = f_before[:, :, n:, :]  # [B, M, N-n, 1]
+            V_now_jump = f_before_then_jump[:, :, n:, :]  # [B, M, N-n, 1]
+            V_now_jump_mean = f_before_then_jump_mean[:, :, n:, :]  # [B, M, N-n, 1]
+            V_hat = (
+                V_now
+                - self.drift_bsde(
+                    t_before[:, :, n:, :],
+                    x_before[:, :, n:, :],
+                    V_now,
+                    u_before[:, :, n:, :],
+                )
+                * self.dt
+                + self.diffusion_bsde(
+                    t_before[:, :, n:, :],
+                    x_before[:, :, n:, :],
+                    grad[:, :, n:, :],
+                    dw[:, :, n:, :],
+                    u_before[:, :, n:, :],
+                )
+                + self.jump_diffusion_bsde(
+                    V_now_jump,
+                    V_now_jump_mean,
+                    V_now,
+                    h[:, :, n:, :],
+                    u_before[:, :, n:, :],
+                )
+            )
+            tele_sum = tf.reduce_sum(V_pls - V_hat, axis=2)  # [B, M, 1]
+            loss_interior += tf.reduce_mean(
+                tf.square(
+                    tele_sum + self.payoff_func(t, x, u_hat) - f_after[:, :, -1, :]
+                )
+            )  # sum([B, M, 1] - [B, M, 1]) -> []
+        return loss_interior
+
+    def loss_terminal(self, data: Tuple[tf.Tensor], training=None) -> tf.Tensor:
+        t, x, _, _, _, u_hat = data
+        f = self((t, x, u_hat))
+        loss_tml = tf.reduce_mean(
+            tf.square(
+                f[:, :, -1, :] - self.payoff_func(t, x, u_hat)
+            )  # sum([B, M, 1] - [B, M, 1]) -> []
+        )
+        return loss_tml
+
+    def jump_diffusion_bsde(
+        self,
+        v_jump: tf.Tensor,  # [B, M, N, 1]
+        v_jump_mean: tf.Tensor,  # [B, M, N, 1]
+        v: tf.Tensor,  # [B, M, N, 1]
+        h: tf.Tensor,
+        u_hat: tf.Tensor,
+        **kwargs,
+    ) -> tf.Tensor:
+        r"""
+        the jump diffusion erm of the BSDE, which is determined by the SDE:
+        Y * (u(t, S*e^z) - u(t, S)) - \lambda * \sum_k^K (u(t, S*e^z_{k}) - u(t, S)) * prob(x = z_{k}) * dt
+        For calculation of \sum_k^K (u(t, S*e^z_{k}) - u(t, S)) * prob(x = z_{k}, we repeat the z and prob to
+        shape [B, M, N, K] then we make [B, M, N, K] * [B, M, N, 1] -> [B, M, N, K] then use the reduce_mean
+        """
+        intensity = tf.expand_dims(u_hat[..., 2], axis=-1)  # [B, M, N, 1]
+        value_jump = h * (v_jump - v)
+        value_jump_mean = intensity * (v_jump_mean - v) * self.eqn_config.dt
+        return value_jump - value_jump_mean
+
+
 class EuropeanPricer(MarkovianPricer):
     def __init__(self, sde, option, config):
         super(EuropeanPricer, self).__init__(sde, option, config)
@@ -494,7 +633,9 @@ class EarlyExercisePricer:
         self.option = option
         self.config = config
         if isinstance(self.sde, HullWhiteModel):
-            self.european_solver = FixIncomeEuropeanPricer(self.sde, self.option, self.config)
+            self.european_solver = FixIncomeEuropeanPricer(
+                self.sde, self.option, self.config
+            )
         else:
             self.european_solver = EuropeanPricer(self.sde, self.option, self.config)
         self.eqn_config = config.eqn_config  # config of the model
@@ -638,7 +779,7 @@ class EarlyExercisePricer:
         # )
         # optimizer = tf.keras.optimizers.Adam(
         #     learning_rate=lr_schedule, epsilon=1e-6
-          # set the optimizer of the European solver
+        # set the optimizer of the European solver
         self.european_solver.reset_round()
         for idx in reversed(range(1, len(self.exercise_index))):
             # construct data set from the original dataset
@@ -655,7 +796,7 @@ class EarlyExercisePricer:
             # if idx == len(self.exercise_index) + 1:
             #     self.european_solver.reset_round()
             # else:
-            #     self.european_solver.step_to_next_round() 
+            #     self.european_solver.step_to_next_round()
             #     self.european_solver.no_net_target.load_weights(
             #     path
             # )
@@ -669,10 +810,8 @@ class EarlyExercisePricer:
             #     path
             # )  # load the weights in the  idx-th path that means we initialize the weight for next task with the previous weight
             # move ahead the index of task
-            self.european_solver.no_net_target.load_weights(
-                path
-            )
-            self.european_solver.step_to_next_round() 
+            self.european_solver.no_net_target.load_weights(path)
+            self.european_solver.step_to_next_round()
             print(f"===============end {idx} th interval============")
         self.european_solver.reset_round()  # reset the index of task to zero
         print("---end---")

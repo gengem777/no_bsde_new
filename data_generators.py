@@ -116,7 +116,7 @@ class JumpDiffusionModelGenerator(BaseGenerator):
         # params_batch_model = tf.tile(tf.constant([[0.4, 0.55, 0.03]]), [self.batch_size, 1]) # [B, 3]
         # params_batch_option = tf.tile(tf.constant([[0.0]]), [self.batch_size, 1]) # [B, 1]
 
-        x, dw, d_jump = self.sde.sde_simulation(params_batch_model, self.config.sample_size)
+        x, dw, h, z = self.sde.sde_simulation(params_batch_model, self.config.sample_size)
         if type(self.option) in path_dependent_list:
             markov_var = self.option.markovian_var(x)
             x = tf.concat([x, markov_var], axis=-1)  # x contains markov variable
@@ -124,5 +124,5 @@ class JumpDiffusionModelGenerator(BaseGenerator):
         option_param = self.option.expand_batch_inputs_dim(params_batch_option)
         u_hat = tf.concat([model_param, option_param], -1)
         t = self.time_stamp
-        data = t, x, dw, d_jump, u_hat
+        data = t, x, dw, h, z, u_hat
         return (data,)

@@ -16,7 +16,6 @@ option_name = "Bond"
 dim = 1
 epsilon = 1.0 # corresponded to the paper in Berner 2020.
 config = load_config(sde_name, option_name, dim)
-config = munch.munchify(config)
 initial_mode = config.eqn_config.initial_mode
 kernel_type = config.net_config.kernel_type
 sde = getattr(eqn, config.eqn_config.sde_name)(config)

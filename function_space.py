@@ -40,9 +40,12 @@ class DenseNet(tf.keras.Model):
                 x = self.dense_layers[i](x)
                 x = tf.nn.relu(x)
         else:
-            for i in range(len(self.dense_layers)):
+            for i in range(len(self.dense_layers)-1):
                 x = self.bn_layers[i](x)
                 x = self.dense_layers[i](x)
+                x = tf.nn.relu(x)
+            x = self.dense_layers[len(self.dense_layers)-1](x)
+
         return x
 
 
@@ -70,6 +73,23 @@ class BlackScholesFormula(tf.keras.Model):
         )
         d2 = d1 - vol * tf.math.sqrt(T - time_tensor)
         return x * dist.cdf(d1) - k * tf.exp(-r * (T - time_tensor)) * dist.cdf(d2)
+
+class EquitySwapFormula(tf.keras.Model):
+    r"""
+    This class is a model to implement equity swap formula
+    """
+
+    def __init__(self, T: tf.Tensor):
+        super(EquitySwapFormula, self).__init__()
+        self.T = T
+
+    def call(self, inputs: Tuple[tf.Tensor], training=None) -> tf.Tensor:
+        time_tensor, state_tensor, u_tensor = inputs
+        x = state_tensor # [B, M, N, d]
+        T = self.T
+        r = tf.expand_dims(u_tensor[:, :, :, 0], -1)
+        k = tf.expand_dims(u_tensor[:, :, :, -1], -1)
+        return tf.reduce_mean(x, axis=-1, keepdims=True)  - k * tf.exp(-r * (T - time_tensor)) # [B, M, N, 1]
     
 class ZeroCouponBondFormula(tf.keras.Model):
     r"""
