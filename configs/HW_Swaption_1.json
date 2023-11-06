@@ -19,9 +19,10 @@
         "x_init": 0.055,
         "vol_init": 0.0,
         "batch_size": 64,
-        "sample_size":  50,
+        "sample_size": 5,
         "sensors": 10,
-        "initial_mode": "partial_fixed"
+        "initial_mode": "partial_fixed",
+        "degree": 4
     },
 
     "net_config": {
@@ -47,8 +48,7 @@
         "sigma_range": [0.01, 0.06],
         "x_init": 0.01,
         "vol_init": 0.0,
-        "batch_size": 100,
-        "sample_size": 100
-        
+        "batch_size": 64,
+        "sample_size":  50
     }
 }
