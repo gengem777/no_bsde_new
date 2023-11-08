@@ -65,16 +65,24 @@ class TestGBMSimpleJump(tf.test.TestCase):
         """
         config = load_config("GBMJ", "Swap", 1)
         sde = GBMwithSimpleJump(config)
-        u_hat = tf.constant([[0.05, 0.1, 2.0]])
+        u_hat = tf.constant(
+            [
+                [0.05, 0.1, 2.0],
+                [0.05, 0.1, 2.5],
+                [0.05, 0.1, 3.0],
+                [0.05, 0.1, 3.5],
+                [0.05, 0.1, 4.0],
+            ]
+        )
         dt = config.eqn_config.dt
         dim = config.eqn_config.dim
         state = tf.ones(
             [config.eqn_config.batch_size, config.eqn_config.sample_size, dim]
         )
         intensity = u_hat[:, 2]
-        happens = sde.jump_happen(state, intensity, 10000)
-        mean_exact = 2.0 * dt
-        mean_empirical = tf.reduce_mean(happens)
+        happens = sde.jump_happen(state, intensity, 100000)
+        mean_exact = [[2.0 * dt], [2.5 * dt], [3.0 * dt], [3.5 * dt], [4.0 * dt]]
+        mean_empirical = tf.reduce_mean(happens, axis=1)
         self.assertAllLessEqual(
             tf.reduce_mean(tf.abs((mean_exact - mean_empirical) / mean_exact)), 0.1
         )

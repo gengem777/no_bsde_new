@@ -43,11 +43,11 @@ train_dataset = dataset.skip(10)
 checkpoint_path = f"./checkpoint/{sde_name}_{option_name}_{dim}"
 # initialize the solver and train
 pricer = PureJumpPricer(sde, option, config)
-# lr_schedule = tf.keras.callbacks.ReduceLROnPlateau(monitor="loss", factor=tf.math.sqrt(0.1), patience=6)
+lr_schedule = tf.keras.callbacks.ReduceLROnPlateau(monitor="loss", factor=tf.math.sqrt(0.1), patience=6)
 optimizer = tf.keras.optimizers.Adam(learning_rate=config.net_config.lr, epsilon=1e-6)
 pricer.compile(optimizer=optimizer)
 # tf.config.run_functions_eagerly(True)
-pricer.fit(x=dataset, epochs=30) #, callbacks=[lr_schedule])
+pricer.fit(x=dataset, epochs=30, callbacks=[lr_schedule])
 pricer.no_net.save_weights(checkpoint_path)
 # split dataset
 for element in test_dataset.take(5):

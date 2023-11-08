@@ -437,8 +437,8 @@ class PureJumpPricer(MarkovianPricer):
         f = self((t, x, u_hat))  # [B, M, N, 1]
         grad = self.get_gradient((t, x, u_hat))
         f_before = f[:, :, :-1, :]  # [B, M, N-1, 1]
-        f_before_then_jump = self((t_before, x_before * tf.exp(z), u_before))
-        f_before_then_jump_mean = self.expect_value(t_before, x_before, u_before)
+        f_before_then_jump = self((t_before, x_before * tf.exp(z), u_before)) # u(t_n, S_n * e ** z)
+        f_before_then_jump_mean = self.expect_value(t_before, x_before, u_before) # \int_z u(t_n, S_n * e ** z) f(dz)
         f_after = f[:, :, 1:, :]  # [B, M, N-1, 1]
         grad = grad[:, :, :-1, :]  # [B, M, N-1, d]
         for n in range(steps - 1):
@@ -463,19 +463,21 @@ class PureJumpPricer(MarkovianPricer):
                     u_before[:, :, n:, :],
                 )
                 + self.jump_diffusion_bsde(
-                    V_now_jump,
-                    V_now_jump_mean,
-                    V_now,
+                    V_now_jump, # u(t_n, S_n * e ** z)
+                    V_now_jump_mean, # \int_z u(t_n, S_n * e ** z) f(dz)
+                    V_now, # u(t_n, S_n)
                     h[:, :, n:, :],
                     u_before[:, :, n:, :],
                 )
             )
-            tele_sum = tf.reduce_sum(V_pls - V_hat, axis=2)  # [B, M, 1]
-            loss_interior += tf.reduce_mean(
+            tele_sum = tf.reduce_mean(V_pls - V_hat, axis=2)  # [B, M, 1]
+            s1 = tf.reduce_mean(
                 tf.square(
                     tele_sum + self.payoff_func(t, x, u_hat) - f_after[:, :, -1, :]
                 )
-            )  # sum([B, M, 1] - [B, M, 1]) -> []
+            )  
+            print(s1)
+            loss_interior += s1 # sum([B, M, 1] - [B, M, 1]) -> []
         return loss_interior
 
     def loss_terminal(self, data: Tuple[tf.Tensor], training=None) -> tf.Tensor:
@@ -490,9 +492,9 @@ class PureJumpPricer(MarkovianPricer):
 
     def jump_diffusion_bsde(
         self,
-        v_jump: tf.Tensor,  # [B, M, N, 1]
-        v_jump_mean: tf.Tensor,  # [B, M, N, 1]
-        v: tf.Tensor,  # [B, M, N, 1]
+        v_jump: tf.Tensor,  # u(t_n, S_n * e ** z), [B, M, N, 1]
+        v_jump_mean: tf.Tensor,  # \int_z u(t_n, S_n * e ** z) f(dz), [B, M, N, 1]
+        v: tf.Tensor,  # u(t_n, S_n), [B, M, N, 1]
         h: tf.Tensor,
         u_hat: tf.Tensor,
         **kwargs,
@@ -504,8 +506,8 @@ class PureJumpPricer(MarkovianPricer):
         shape [B, M, N, K] then we make [B, M, N, K] * [B, M, N, 1] -> [B, M, N, K] then use the reduce_mean
         """
         intensity = tf.expand_dims(u_hat[..., 2], axis=-1)  # [B, M, N, 1]
-        value_jump = h * (v_jump - v)
-        value_jump_mean = intensity * (v_jump_mean - v) * self.eqn_config.dt
+        value_jump = h * (v_jump - v) # Y_n * (u(t_n, S_n * e ** z) - u(t_n, S_n))
+        value_jump_mean = intensity * (v_jump_mean - v) * self.eqn_config.dt # l * (\int_z u(t_n, S_n * e ** z) f(dz) - \int_z u(t_n, S_n) f(dz)) * dt
         return value_jump - value_jump_mean
 
 

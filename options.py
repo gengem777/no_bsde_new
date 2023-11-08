@@ -209,10 +209,10 @@ class EuropeanSwap(EuropeanOption):
         u_hat: [B, M, N, k]
         return: [B, M, N, 1]
         """
-        k = tf.expand_dims(u_hat[:, :, :, -1], axis=-1)
-        x = tf.reduce_mean(x[:, :, :, : self.config.dim], axis=-1, keepdims=True)
+        k = tf.expand_dims(u_hat[..., -1], axis=-1)
+        x = tf.reduce_mean(x[..., : self.config.dim], axis=-1, keepdims=True)
         T = self.config.T
-        r = tf.expand_dims(u_hat[:, :, :, 0], -1)
+        r = tf.expand_dims(u_hat[..., 0], -1)
         K = k * self.config.x_init
         c = x - K * tf.exp(-r * (T - t))
         return c  # [B, M, N, 1]

@@ -307,3 +307,6 @@ class GBMwithSimpleJump(ItoJumpProcess):
         u_curve = self.representor.get_sensor_value(u_curve)
         u_param = u_hat[..., 3:]
         return u_curve, u_param
+
+class StochasticVolJumpModel(ItoJumpProcess):
+    pass

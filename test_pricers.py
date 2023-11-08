@@ -88,7 +88,7 @@ class TestPricer(tf.test.TestCase):
         samples = config.eqn_config.sample_size
         time_steps = config.eqn_config.time_steps
         dims = config.eqn_config.dim
-        dataset_path = "./dataset/GBMJ_Swap_1_100"
+        # dataset_path = "./dataset/GBMJ_Swap_1_100"
         create_dataset("GBMJ", "Swap", 1, 10)
         dataset_path = "./dataset/GBMJ_Swap_1_100"
         dataset = tf.data.experimental.load(
@@ -102,10 +102,10 @@ class TestPricer(tf.test.TestCase):
                 tf.TensorSpec(shape=(samples, time_steps + 1, 4)), # degree = 4
             ),
         )
-        dataset = dataset.batch(100)
+        dataset = dataset.batch(5)
         for e in dataset.take(1):
-            _, l1, l2 = solver.loss_fn(e)
-        print(l1/time_steps, l2)
+            l, l1, l2 = solver.loss_fn(e)
+        print(l1/time_steps, l2, l)
         self.assertAllLessEqual(l1 / time_steps, 1e-3)
         self.assertAllLessEqual(l2, 1e-3)
     
