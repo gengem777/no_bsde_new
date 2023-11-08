@@ -7,47 +7,7 @@ from options import (
     InterestRateSwap,
 )
 from sde import GeometricBrownianMotion, HullWhiteModel
-import json
-import munch
-
-
-sde_list = ["GBM", "TGBM", "SV", "HW", "SVJ"]
-option_list = [
-    "European",
-    "EuropeanPut",
-    "Lookback",
-    "Asian",
-    "Basket",
-    "BasketnoPI",
-    "Swap",
-    "Swaption",
-    "TimeEuropean",
-    "BermudanPut",
-]
-dim_list = [1, 3, 5, 10, 20]
-
-
-def load_config(sde_name: str, option_name: str, dim: int = 1):
-    """
-    This function is for introducing config json files into test functions
-    """
-    if (
-        (sde_name not in sde_list)
-        or (option_name not in option_list)
-        or (dim not in dim_list)
-    ):
-        raise ValueError(
-            f"please input right sde_name in {sde_list},\
-                          option_name in {option_list} and dim in {dim_list}"
-        )
-    else:
-        json_path = f"./configs/{sde_name}_{option_name}_{dim}.json"
-    with open(json_path) as json_data_file:
-        config = json.load(json_data_file)
-
-    config = munch.munchify(config)
-    return config
-
+from utils import load_config
 
 class TestEuropeanOption(tf.test.TestCase):
     """

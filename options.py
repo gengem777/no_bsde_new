@@ -179,7 +179,7 @@ class EuropeanSwap(EuropeanOption):
         super(EuropeanSwap, self).__init__(config)
         self.strike = 0.05  # we assume all products have a unified strike
 
-    def payoff(self, t: tf.Tensor, x: tf.Tensor, param: tf.Tensor):
+    def payoff(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor):
         r"""
         The payoff function is S_T - K where:
           K is forward price which is predetermined which is included into u_hat
@@ -194,14 +194,14 @@ class EuropeanSwap(EuropeanOption):
         payoff: tf.Tensor
             swap payoff. Tensor of shape (batch_size, sample_size, 1)
         """
-        k = tf.expand_dims(param[:, :, 0, -1], axis=-1)
+        k = tf.expand_dims(u_hat[:, :, 0, -1], axis=-1)
         temp = tf.reduce_mean(
             x[:, :, -1, : self.config.dim], axis=-1, keepdims=True
         )  # [B, M, 1]
         K = k * self.config.x_init
         return temp - K  # [B, M, 1]
 
-    def exact_price(self, t: tf.Tensor, x: tf.Tensor, params: tf.Tensor):
+    def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor):
         """
         Implement the forward analytical formula
         t: [B, M, N, 1]
@@ -209,10 +209,10 @@ class EuropeanSwap(EuropeanOption):
         u_hat: [B, M, N, k]
         return: [B, M, N, 1]
         """
-        k = tf.expand_dims(params[:, :, :, -1], axis=-1)
-        x = tf.reduce_mean(x[:, :, :, : self.config.dim], axis=-1, keepdims=True)
+        k = tf.expand_dims(u_hat[..., -1], axis=-1)
+        x = tf.reduce_mean(x[..., : self.config.dim], axis=-1, keepdims=True)
         T = self.config.T
-        r = tf.expand_dims(params[:, :, :, 0], -1)
+        r = tf.expand_dims(u_hat[..., 0], -1)
         K = k * self.config.x_init
         c = x - K * tf.exp(-r * (T - t))
         return c  # [B, M, N, 1]
@@ -666,7 +666,44 @@ class InterestRateSwap(BaseOption):
         )
         p_se = A * tf.exp(-B * tf.reduce_sum(x, axis=-1, keepdims=True))
         return p_se # [B, M, N, 1] or [B, M, 1]
+    
+    def exact_price(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        r"""
+        This yield the analytical value of the swap which will be swaped for twice:
+         v_t = p(t, 1) - K * p(t, 2) - (1.0 + K) * p(t, 3)
+        t: [B, M, N, 1]
+        x: [B, M, N, 1]
+        u_hat: [B, M, N, 4]
+        return: v: [B, M, N, 1]
+        """
+        p1 = self.zcp(t, x, u_hat, 1.0) # [B, M, N, 1] 
+        p2 = self.zcp(t, x, u_hat, 2.0) # [B, M, N, 1] 
+        p3 = self.zcp(t, x, u_hat, 3.0) # [B, M, N, 1] 
+        v = p1 - self.fix_rate * p2 - (1.0 + self.fix_rate) * p3 # [B, M, N, 1] 
+        return v # [B, M, N, 1] 
 
+class InterestRateSwaption(InterestRateSwap):
+    def __init__(self, config):
+        super(InterestRateSwaption, self).__init__(config)
+    
+    def payoff_at_maturity(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        p_23 = self.zcp(
+            self.config.leg_dates[1],
+            x[:, :, -1, :],
+            u_hat[:, :, -1, :],
+            self.config.leg_dates[-1],
+        ) # [B, M, 1]
+        return 1.0 - (1.0 + self.fix_rate) * p_23 # [B, M, 1]
+    
+    def payoff_inter(self, t: tf.Tensor, x: tf.Tensor, u_hat: tf.Tensor) -> tf.Tensor:
+        """
+        In this specified case, we use the analytical continuation value in the last time interval
+        Then the max(early exercise value, continuation value) will play the role on the terminal payoff
+        """
+        p_12 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 2.0) # [B, M, 1]
+        p_13 = self.zcp(1.0, x[:, :, -1, :], u_hat[:, :, -1, :], 3.0) # [B, M, 1]
+        early_exercise_value = 1.0 - self.fix_rate * p_12 - (1.0 + self.fix_rate) * p_13 # [B, M, 1]
+        return early_exercise_value # [B, M, 1]
 class InterestRateSwaptionLast(InterestRateSwap):
     """
     This class is for testing of Bermudan Swaption and this is just for the swaption value in the last 

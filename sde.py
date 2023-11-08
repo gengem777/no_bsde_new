@@ -4,7 +4,7 @@ import tensorflow_probability as tfp
 from function_representors import QuadraticRepresentor, ExponentialDecayRepresentor, ConstantRepresentor
 
 
-class ItoProcessDriver(ABC):
+class ItoProcess(ABC):
     """Abstract class for Ito processes, themselves driven by another Ito process B(t).
     This class represents the solution to an Ito stochastic differential equation with jump diffusion of the form
     $dX_t = r * X_t dt + \sigma(X(t), t) X_t dB(t)
@@ -14,7 +14,7 @@ class ItoProcessDriver(ABC):
     The class ItoProcessDriven implements common methods for sampling from the solution to this SDE,
     """
 
-    def __init__(self, config):  # TODO
+    def __init__(self, config): 
         """
         config is the set of the hyper-parameters
         we give the notations:
@@ -182,7 +182,8 @@ class ItoProcessDriver(ABC):
         drift = self.drift(time, state, u_hat)  # [B, M, d]
         diffusion = self.diffusion(time, state, u_hat)  # [B, M, d]
         increment = drift * dt + diffusion * noise  # [B, M, d]
-        return state + increment, noise  # [B, M, d], [B, M, d]
+        new_state = state + increment
+        return new_state, noise  # [B, M, d], [B, M, d]
 
     def sde_simulation(self, u_hat: tf.Tensor, samples: int):
         """
@@ -191,6 +192,7 @@ class ItoProcessDriver(ABC):
         x: path of states, shape: (batch_size, path_size, num_timesteps, dim)
         dw: path of BM increments, shape: (batch_size, path_size, num_timesteps-1, dim)
         """
+        tf.random.set_seed(0)
         stepsize = self.config.dt
         time_steps = self.config.time_steps
         state_process = tf.TensorArray(tf.float32, size=time_steps + 1)
@@ -266,9 +268,12 @@ class ItoProcessDriver(ABC):
         u_curve: batch_size + (time_steps, num_curves), u_param = batch_size + (1)
         """
         return u_hat, _
+    
 
 
-class GeometricBrownianMotion(ItoProcessDriver):
+
+
+class GeometricBrownianMotion(ItoProcess):
     """
     A subclass of ItoProcess, MertonJumpDiffusionProcess under Q measure, mainly for testing.
     This class implements a multivariate geometric Brownian motion process:
@@ -575,7 +580,7 @@ class TimeDependentGBM(GeometricBrownianMotion):
         return u_curve, u_param
 
 
-class HestonModel(ItoProcessDriver):
+class HestonModel(ItoProcess):
     r"""
     The Heston model is as follow:
      d S_t &= r S_t dt + \sqrt{v_t} S_t dW^S_t \\
@@ -790,7 +795,7 @@ class HestonModel(ItoProcessDriver):
         return u_curve, u_param
 
 
-class HullWhiteModel(ItoProcessDriver):
+class HullWhiteModel(ItoProcess):
     r"""
     This class implement the one factor Hull-White model. The model is:
     d r_t = k(\theta(t) - r_t) dt + \sigma dW_t

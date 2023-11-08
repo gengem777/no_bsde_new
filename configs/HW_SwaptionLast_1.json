@@ -4,52 +4,90 @@
         "sde_name": "HullWhiteModel",
         "option_name": "InterestRateSwaptionLast",
         "solver_name": "EuropeanSolver",
-        "exercise_date": [1.0, 2.0],
-        "leg_dates": [1.0, 2.0, 3.0],
+        "exercise_date": [
+            1.0,
+            2.0
+        ],
+        "leg_dates": [
+            1.0,
+            2.0,
+            3.0
+        ],
         "T": 2.0,
         "dt": 0.1,
         "dim": 1,
         "time_steps": 20,
         "time_steps_one_year": 10,
         "strike": 0.0,
-        "strike_range":[0.0, 0.0],
-        "kappa_range": [0.3, 0.5],
-        "theta_range": [0.05, 0.06],
-        "sigma_range": [0.02, 0.04],
+        "strike_range": [
+            0.0,
+            0.0
+        ],
+        "kappa_range": [
+            0.4,
+            0.4
+        ],
+        "theta_range": [
+            0.055,
+            0.055
+        ],
+        "sigma_range": [
+            0.03,
+            0.03
+        ],
         "x_init": 0.055,
         "vol_init": 0.0,
         "batch_size": 64,
-        "sample_size":  50,
+        "sample_size": 50,
         "sensors": 10,
         "initial_mode": "partial_fixed",
         "degree": 4
     },
-
     "net_config": {
         "pi": "false",
-        "branch_layer_sizes": [15, 15, 15],
-        "trunk_layer_sizes": [15, 15, 15],
-        "pi_layer_sizes": [10, 10],
+        "branch_layer_sizes": [
+            15,
+            10,
+            15
+        ],
+        "trunk_layer_sizes": [
+            15,
+            10,
+            15
+        ],
+        "pi_layer_sizes": [
+            10,
+            10
+        ],
         "kernel_type": "no",
         "num_filters": 1,
         "num_strides": 10,
         "num_outputs": 6,
-        "activation": "None",
-        "lr": 5e-3,
+        "activation": "relu",
+        "lr": 3e-3,
         "epochs": 3,
-        "alpha": 1.0
-        
+        "alpha": 10.0
     },
-
     "val_config": {
-        "strike_range":[0.01, 0.001],
-        "kappa_range": [0.005, 0.08],
-        "theta_range": [0.2, 0.8],
-        "sigma_range": [0.01, 0.06],
+        "strike_range": [
+            0.01,
+            0.001
+        ],
+        "kappa_range": [
+            0.005,
+            0.08
+        ],
+        "theta_range": [
+            0.2,
+            0.8
+        ],
+        "sigma_range": [
+            0.01,
+            0.06
+        ],
         "x_init": 0.01,
         "vol_init": 0.0,
         "batch_size": 100,
         "sample_size": 100
-        
     }
 }

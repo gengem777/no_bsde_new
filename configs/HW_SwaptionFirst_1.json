@@ -13,9 +13,9 @@
         "time_steps_one_year": 10,
         "strike": 0.0,
         "strike_range":[0.0, 0.0],
-        "kappa_range": [0.3, 0.5],
-        "theta_range": [0.05, 0.06],
-        "sigma_range": [0.02, 0.04],
+        "kappa_range": [0.4, 0.4],
+        "theta_range": [0.055, 0.055],
+        "sigma_range": [0.03, 0.03],
         "x_init": 0.055,
         "vol_init": 0.0,
         "batch_size": 64,
@@ -27,17 +27,17 @@
 
     "net_config": {
         "pi": "false",
-        "branch_layer_sizes": [15, 15, 15],
-        "trunk_layer_sizes": [15, 15, 15],
+        "branch_layer_sizes": [15, 10, 15],
+        "trunk_layer_sizes": [15, 10, 15],
         "pi_layer_sizes": [10, 10],
         "kernel_type": "no",
         "num_filters": 1,
         "num_strides": 10,
         "num_outputs": 6,
-        "activation": "None",
-        "lr": 5e-3,
+        "activation": "relu",
+        "lr": 3e-4,
         "epochs": 3,
-        "alpha": 1.0
+        "alpha": 10.0
         
     },
 

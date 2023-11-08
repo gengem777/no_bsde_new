@@ -6,50 +6,16 @@ import sde as eqn
 import options as opts
 from pricers import EarlyExercisePricer, MarkovianPricer
 from generate_data import create_dataset
+import global_constants as constants
+from utils import load_config
 
 # load config
-sde_list = ["GBM", "TGBM", "SV", "SVJ", "HW"]
-option_list = [
-    "European",
-    "EuropeanPut",
-    "Lookback",
-    "Asian",
-    "Basket",
-    "BasketnoPI",
-    "Swap",
-    "Bond",
-    "Swaption",
-    "SwaptionFirst",
-    "SwaptionLast",
-    "TimeEuropean",
-    "BermudanPut",
-]
-dim_list = [1, 3, 5, 10, 20]
-tf.random.set_seed(0)
-np.random.seed(0)
-
-
-
 print("load dataset and config and classes for phase one training")
 sde_name = "HW"
 option_name = "SwaptionLast"
 dim = 1
 epsilon = 1.0 
-if (
-    (sde_name not in sde_list)
-    or (option_name not in option_list)
-    or (dim not in dim_list)
-):
-    raise ValueError(
-        f"please input right sde_name in {sde_list},\
-                          option_name in {option_list} and dim in {dim_list}"
-    )
-else:
-    json_path = f"./configs/{sde_name}_{option_name}_{dim}.json"
-with open(json_path) as json_data_file:
-    config = json.load(json_data_file)
-
-config = munch.munchify(config)
+config = load_config(sde_name, option_name, dim)
 initial_mode = config.eqn_config.initial_mode
 kernel_type = config.net_config.kernel_type
 sde = getattr(eqn, config.eqn_config.sde_name)(config)
@@ -100,22 +66,7 @@ pricer.no_net.save_weights(checkpoint_path)
 sde_name = "HW"
 option_name = "SwaptionFirst"
 dim = 1
-
-if (
-    (sde_name not in sde_list)
-    or (option_name not in option_list)
-    or (dim not in dim_list)
-):
-    raise ValueError(
-        f"please input right sde_name in {sde_list},\
-                          option_name in {option_list} and dim in {dim_list}"
-    )
-else:
-    json_path = f"./configs/{sde_name}_{option_name}_{dim}.json"
-with open(json_path) as json_data_file:
-    config = json.load(json_data_file)
-
-config = munch.munchify(config)
+config = load_config(sde_name, option_name, dim)
 initial_mode = config.eqn_config.initial_mode
 kernel_type = config.net_config.kernel_type
 sde = getattr(eqn, config.eqn_config.sde_name)(config)
