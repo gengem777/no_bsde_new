@@ -1,0 +1,206 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyperFirstAtBeginDocument{\AtBeginDocument}
+\HyperFirstAtBeginDocument{\ifx\hyper@anchor\@undefined
+\global\let\oldnewlabel\newlabel
+\gdef\newlabel#1#2{\newlabelxx{#1}#2}
+\gdef\newlabelxx#1#2#3#4#5#6{\oldnewlabel{#1}{{#2}{#3}}}
+\AtEndDocument{\ifx\hyper@anchor\@undefined
+\let\newlabel\oldnewlabel
+\fi}
+\fi}
+\global\let\hyper@last\relax 
+\gdef\HyperFirstAtBeginDocument#1{#1}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{duffy2013finite}
+\citation{hilber2013computational}
+\citation{mijatovic2013continuously}
+\citation{zhang2019analysis}
+\citation{glasserman2004monte}
+\citation{sirignano2018dgm}
+\citation{gu2021selectnet}
+\citation{han2017deep}
+\citation{han2018solving}
+\citation{hure2020deep}
+\citation{beck2021deep}
+\citation{jacquier2019deep}
+\citation{sabate2020solving}
+\citation{feng2021deep}
+\citation{liang2021deep}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introductions}{1}{section.1}\protected@file@percent }
+\citation{berner2020numerically}
+\citation{glau2022deep}
+\citation{sirignano2018dgm}
+\citation{berner2020numerically}
+\citation{lu2021learning}
+\citation{chen1995universal}
+\citation{berner2020numerically}
+\citation{glau2022deep}
+\citation{berner2020numerically}
+\citation{glau2022deep}
+\citation{lu2021learning}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Operator Network}{3}{section.2}\protected@file@percent }
+\newlabel{sec:OperatorNetwork}{{2}{3}{Operator Network}{section.2}{}}
+\newlabel{eq:operator}{{2}{3}{Operator Network}{section.2}{}}
+\citation{lu2021learning}
+\citation{chen1995universal}
+\citation{lu2021learning}
+\citation{lu2021learning}
+\citation{tan2022enhanced}
+\newlabel{eq:G-rep-approx}{{2}{4}{Operator Network}{Item.2}{}}
+\newlabel{eq:G-rep}{{2}{4}{Operator Network}{Item.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Architecture of DeepONet: This figure illustrate the basic structure of the operator network which is composed by branch net and trunk net. For branch net, we do function representation of $a = (a_1,...,a_p)$ by methods provided before (sample on grid or kernel operator) and the send the representation $ (\tilde  {a}_1,\cdots  ,\tilde  {a}_p)$ into the branch network and the output a vector of $\mathbb  {R}^q$; For trunk net, we can do some processing on $t$ or $y$ (where $y$ in the picture is exactly $x$.) and then input them into a neural network and output a vector of $\mathbb  {R}^q$. Finally, we do the innerproduct of outputs from both networks and then obtain the price value given $(t, x; a)$.}}{5}{figure.1}\protected@file@percent }
+\newlabel{fig:deeponet}{{1}{5}{Architecture of DeepONet: This figure illustrate the basic structure of the operator network which is composed by branch net and trunk net. For branch net, we do function representation of $a = (a_1,...,a_p)$ by methods provided before (sample on grid or kernel operator) and the send the representation $ (\tilde {a}_1,\cdots ,\tilde {a}_p)$ into the branch network and the output a vector of $\mathbb {R}^q$; For trunk net, we can do some processing on $t$ or $y$ (where $y$ in the picture is exactly $x$.) and then input them into a neural network and output a vector of $\mathbb {R}^q$. Finally, we do the innerproduct of outputs from both networks and then obtain the price value given $(t, x; a)$}{figure.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Training of Pricing Operator Network}{5}{section.3}\protected@file@percent }
+\newlabel{sec:pricing}{{3}{5}{Training of Pricing Operator Network}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}BSDE for Derivative Pricing}{5}{subsection.3.1}\protected@file@percent }
+\citation{sabate2020solving}
+\citation{jacquier2019deep}
+\citation{feng2021deep}
+\citation{bayraktar2022deep}
+\citation{saporito2020pdgm}
+\newlabel{eq:GBM}{{1}{6}{BSDE for Derivative Pricing}{equation.3.1}{}}
+\newlabel{eq:price-function}{{3.1}{6}{BSDE for Derivative Pricing}{equation.3.1}{}}
+\newlabel{eq:BSDE}{{2}{6}{BSDE for Derivative Pricing}{equation.3.2}{}}
+\MT@newlabel{eq:GBM}
+\citation{lu2021learning}
+\citation{germain2022deepsets}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Trunk Network Design-Adding Permutation Invariant Layers}{7}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Loss Function}{7}{subsection.3.3}\protected@file@percent }
+\MT@newlabel{eq:BSDE}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Architecture of the PI net: First we seperate the state of each assets and the forward the state of each asset into a neural network $\varphi (\cdot )$ seprately and the we get a matrix in $\mathbb  {R}^{dxk}$. Then we pass this matrix into the symmetric operator (e.g. we calculate the average on the dimension of $d$). Finally we forward the output into a ordinary FNN and we have the output which is invariant of the permutation of underlying assets.}}{8}{figure.2}\protected@file@percent }
+\newlabel{fig:sym}{{2}{8}{Architecture of the PI net: First we seperate the state of each assets and the forward the state of each asset into a neural network $\varphi (\cdot )$ seprately and the we get a matrix in $\mathbb {R}^{dxk}$. Then we pass this matrix into the symmetric operator (e.g. we calculate the average on the dimension of $d$). Finally we forward the output into a ordinary FNN and we have the output which is invariant of the permutation of underlying assets}{figure.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Architecture of the pricing operator network (PONet): This is the detailed forward propagation of out network. For branch network: we first forward the functions into a embedding net which plays a role on function representation and it can be parametrized and unparameterized based on the kernel operator we have chosen then we concatencate the representation and real valued coefficients to a unified tensor and send it into the branch network; For trunk network: we first forward state variables into the permutation invariant network and concatencate the output with the time variable and finally send them into the trunk network.}}{8}{figure.3}\protected@file@percent }
+\newlabel{fig:detailed_deeponet}{{3}{8}{Architecture of the pricing operator network (PONet): This is the detailed forward propagation of out network. For branch network: we first forward the functions into a embedding net which plays a role on function representation and it can be parametrized and unparameterized based on the kernel operator we have chosen then we concatencate the representation and real valued coefficients to a unified tensor and send it into the branch network; For trunk network: we first forward state variables into the permutation invariant network and concatencate the output with the time variable and finally send them into the trunk network}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.1}Loss Function under Diffusion Processes}{9}{subsubsection.3.3.1}\protected@file@percent }
+\MT@newlabel{eq:GBM}
+\newlabel{eq:GBM-dist}{{3.3.1}{9}{Loss Function under Diffusion Processes}{subsubsection.3.3.1}{}}
+\newlabel{eq:dist-BSDE}{{3.3.1}{9}{Loss Function under Diffusion Processes}{subsubsection.3.3.1}{}}
+\newlabel{eq:Z}{{3.3.1}{9}{Loss Function under Diffusion Processes}{subsubsection.3.3.1}{}}
+\newlabel{eq:loss-a}{{3.3.1}{10}{Loss Function under Diffusion Processes}{subsubsection.3.3.1}{}}
+\newlabel{eq:total-loss}{{3.3.1}{10}{Loss Function under Diffusion Processes}{subsubsection.3.3.1}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.2}Algorithm of European Style Products}{10}{subsubsection.3.3.2}\protected@file@percent }
+\newlabel{sec:euro}{{3.3.2}{10}{Algorithm of European Style Products}{subsubsection.3.3.2}{}}
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces Training of the Pricing Operator Network on $[T_1, T_2]$}}{10}{algorithm.1}\protected@file@percent }
+\newlabel{alg:euro_algo}{{1}{10}{Algorithm of European Style Products}{algorithm.1}{}}
+\citation{gao2022convergence}
+\citation{wang2018deep}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Framework with Early Exercise Features}{11}{subsection.3.4}\protected@file@percent }
+\newlabel{bsde: amc}{{3.4}{11}{Framework with Early Exercise Features}{subsection.3.4}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.1}General Algorithm of Early Exercise Products}{11}{subsubsection.3.4.1}\protected@file@percent }
+\newlabel{sec:algo2}{{3.4.1}{11}{General Algorithm of Early Exercise Products}{subsubsection.3.4.1}{}}
+\@writefile{loa}{\contentsline {algorithm}{\numberline {2}{\ignorespaces Training of the Operator Network with Early Exercise Feature}}{12}{algorithm.2}\protected@file@percent }
+\newlabel{alg:euro_bermudan}{{2}{12}{General Algorithm of Early Exercise Products}{algorithm.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.2}A Typical Case: Bermudan Swaption under Hull-White Model}{12}{subsubsection.3.4.2}\protected@file@percent }
+\newlabel{sde: HW}{{3.4.2}{12}{A Typical Case: Bermudan Swaption under Hull-White Model}{subsubsection.3.4.2}{}}
+\citation{yamakami2022pricing}
+\newlabel{zcb}{{3.4.2}{13}{A Typical Case: Bermudan Swaption under Hull-White Model}{subsubsection.3.4.2}{}}
+\citation{tensorflow2015-whitepaper}
+\newlabel{bsde: hw}{{3}{14}{A Typical Case: Bermudan Swaption under Hull-White Model}{Item.9}{}}
+\citation{kingma2014adam}
+\citation{glorot2010understanding}
+\citation{berner2020numerically}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experiments}{15}{section.4}\protected@file@percent }
+\newlabel{sec:numerics}{{4}{15}{Experiments}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Experiment Specifications}{15}{subsection.4.1}\protected@file@percent }
+\citation{heston1993closed}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Structure of PONet: Each list corresponded to the structure of a feed forward neural network, for example $[15, 15, 15]$ means that this FNN has three layers and each layer has 15 neurons and so on so forth.}}{16}{table.1}\protected@file@percent }
+\newlabel{tab:PONet}{{1}{16}{Structure of PONet: Each list corresponded to the structure of a feed forward neural network, for example $[15, 15, 15]$ means that this FNN has three layers and each layer has 15 neurons and so on so forth}{table.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Setting of training and testing: $B$ is the number of batches which is same as that in the loss function given from last section; $M$ is the number of sample paths generated from a single set of input coefficient vectors.}}{16}{table.2}\protected@file@percent }
+\newlabel{tab:train-test}{{2}{16}{Setting of training and testing: $B$ is the number of batches which is same as that in the loss function given from last section; $M$ is the number of sample paths generated from a single set of input coefficient vectors}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Equity Products under Time-dependent GBM and Heston Model}{16}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.1}Time-dependent GBM Model}{16}{subsubsection.4.2.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Sampling distributions of coefficients under the time-dependent GBM model: The 1st column denotes the symbol of each coefficient of the time-dependent geometric Brownian motion (GBM) model; The 2nd colume denotes the distribution of coefficients.}}{17}{table.3}\protected@file@percent }
+\newlabel{tab:dist-TDGBM}{{3}{17}{Sampling distributions of coefficients under the time-dependent GBM model: The 1st column denotes the symbol of each coefficient of the time-dependent geometric Brownian motion (GBM) model; The 2nd colume denotes the distribution of coefficients}{table.3}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.2}Heston Model}{17}{subsubsection.4.2.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Sampling distributions of coefficients under the Heston model: The 1st column denotes the symbol of each coefficient of the Heston model; The 2nd colume denotes the distribution of coefficients.}}{17}{table.4}\protected@file@percent }
+\newlabel{tab:dist-Heston}{{4}{17}{Sampling distributions of coefficients under the Heston model: The 1st column denotes the symbol of each coefficient of the Heston model; The 2nd colume denotes the distribution of coefficients}{table.4}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.3}Numerical Results}{17}{subsubsection.4.2.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Test errors of some options under the time-dependent GBM model and Heston stochastic volatility model. The 3rd column shows the percentage error corresponded to asset paths sampled from the distribution given in the table \ref {tab:dist-TDGBM} and \ref {tab:dist-Heston} (distribution for both training and testing). For each product, we illustrate the test percentage error for different numbers of iterations where we can see a rapid decrease for first 100 iterations. We also note the standard deviation of the test error and we can find that the standard deviation also converge to a low level. First four blocks notes the results under time-dependent GBM for vanilla European options, basket options, lookback options and geometric Asian options and the last two blocks shows the results of forward under 1 dimension and 10 dimensions. }}{18}{table.5}\protected@file@percent }
+\newlabel{tab:test-GBM&SV}{{5}{18}{Test errors of some options under the time-dependent GBM model and Heston stochastic volatility model. The 3rd column shows the percentage error corresponded to asset paths sampled from the distribution given in the table \ref {tab:dist-TDGBM} and \ref {tab:dist-Heston} (distribution for both training and testing). For each product, we illustrate the test percentage error for different numbers of iterations where we can see a rapid decrease for first 100 iterations. We also note the standard deviation of the test error and we can find that the standard deviation also converge to a low level. First four blocks notes the results under time-dependent GBM for vanilla European options, basket options, lookback options and geometric Asian options and the last two blocks shows the results of forward under 1 dimension and 10 dimensions}{table.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Fixed-Income Products}{18}{subsection.4.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Sampling distributions of coefficients under the Hull White model: The equation $\theta (t) = R_0$ means that there is a constrain in HW model and then we just need to only sample $\theta $ rather than sample both $\theta $ and $R_0$. Since we let the rate curve become flat, we just need to sample $\theta = \theta (t)$ in a uniform distribution.}}{18}{table.6}\protected@file@percent }
+\newlabel{tab:dist-HW}{{6}{18}{Sampling distributions of coefficients under the Hull White model: The equation $\theta (t) = R_0$ means that there is a constrain in HW model and then we just need to only sample $\theta $ rather than sample both $\theta $ and $R_0$. Since we let the rate curve become flat, we just need to sample $\theta = \theta (t)$ in a uniform distribution}{table.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Analytical price and predicted price by PONet under the time dependent GBM model and Heston stochastic volatility model. For each subplot, the purple curves are simulated derivative paths from the learned operator network and we legend this as learned solution while the light blue curves are corresponded to analytical solutions.}}{19}{figure.4}\protected@file@percent }
+\newlabel{fig:simul-GBM}{{4}{19}{Analytical price and predicted price by PONet under the time dependent GBM model and Heston stochastic volatility model. For each subplot, the purple curves are simulated derivative paths from the learned operator network and we legend this as learned solution while the light blue curves are corresponded to analytical solutions}{figure.4}{}}
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(a)}{\ignorespaces {GBM European $d=1$}}}{19}{figure.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(b)}{\ignorespaces {GBM European $d=10$}}}{19}{figure.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(c)}{\ignorespaces {GBM Lookback }}}{19}{figure.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(d)}{\ignorespaces {GBM Asian ($d=1$)}}}{19}{figure.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(e)}{\ignorespaces {Heston forward $d=1$}}}{19}{figure.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {subfigure}{\numberline{(f)}{\ignorespaces {Heston forward $d=10$}}}{19}{figure.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.1}Zero Coupon Bond}{20}{subsubsection.4.3.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces result of zero coupon bond. We can find the the learned solution converge to the analytical solution and the initial value and interiors value both come close to the path of analytical solution.}}{20}{figure.5}\protected@file@percent }
+\newlabel{fig:zcp}{{5}{20}{result of zero coupon bond. We can find the the learned solution converge to the analytical solution and the initial value and interiors value both come close to the path of analytical solution}{figure.5}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.2}Bermudan Swaption}{20}{subsubsection.4.3.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Result of the Bermudan Swaption price comparison with $\kappa =0.4$ and $\sigma =[0.03, 0.05]$. The first colume give the level of the flatten forward rate curve at initial time; The second colume (price from operator) gives the price of Bermudan Swaption calculated from the trained operator at initial time; The third colume is the same price given by the benchmark from \texttt  {tf\_quant\_finance} library}}{21}{table.7}\protected@file@percent }
+\newlabel{tab:BSwaption1}{{7}{21}{Result of the Bermudan Swaption price comparison with $\kappa =0.4$ and $\sigma =[0.03, 0.05]$. The first colume give the level of the flatten forward rate curve at initial time; The second colume (price from operator) gives the price of Bermudan Swaption calculated from the trained operator at initial time; The third colume is the same price given by the benchmark from \texttt {tf\_quant\_finance} library}{table.7}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces The first colume give the level of the flatten forward rate curve at initial time; The second colume (price from operator) gives the price of Bermudan Swaption calculated from the trained operator at initial time; The third colume gives the Bermudan Swaption price when the \textcolor {blue}{continuation value of the last exercise period is calculated by analytical solution rather than the neural operator trained from the last time interval} (We just substitute the continuation value in the last exercise period into the analytical ones since only in the last time period does it have analytical value which is the European swaption or Bond option). The fourth colume is the same price given by the benchmark from \texttt  {tf\_quant\_finance} library. }}{21}{table.8}\protected@file@percent }
+\newlabel{tab:BSwaption2}{{8}{21}{The first colume give the level of the flatten forward rate curve at initial time; The second colume (price from operator) gives the price of Bermudan Swaption calculated from the trained operator at initial time; The third colume gives the Bermudan Swaption price when the \textcolor {blue}{continuation value of the last exercise period is calculated by analytical solution rather than the neural operator trained from the last time interval} (We just substitute the continuation value in the last exercise period into the analytical ones since only in the last time period does it have analytical value which is the European swaption or Bond option). The fourth colume is the same price given by the benchmark from \texttt {tf\_quant\_finance} library}{table.8}{}}
+\citation{gnoatto2022deep}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Extensions}{22}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Under Jump Processes}{22}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.1}Loss Function}{22}{subsubsection.5.1.1}\protected@file@percent }
+\newlabel{eq:jumpSDE}{{5.1.1}{22}{Loss Function}{subsubsection.5.1.1}{}}
+\newlabel{eq:discSDE}{{5.1.1}{22}{Loss Function}{subsubsection.5.1.1}{}}
+\newlabel{eq:disc-jumpBSDE}{{5.1.1}{22}{Loss Function}{subsubsection.5.1.1}{}}
+\newlabel{eq:Z}{{5.1.1}{23}{Loss Function}{subsubsection.5.1.1}{}}
+\newlabel{eq:loss-jump-a}{{5.1.1}{23}{Loss Function}{subsubsection.5.1.1}{}}
+\newlabel{eq:penalty-jump-a}{{5.1.1}{23}{Loss Function}{subsubsection.5.1.1}{}}
+\newlabel{eq:total-loss}{{5.1.1}{23}{Loss Function}{subsubsection.5.1.1}{}}
+\citation{bates1996jumps}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.2}Algorithm of European Style Products}{24}{subsubsection.5.1.2}\protected@file@percent }
+\newlabel{sec:euro_jump}{{5.1.2}{24}{Algorithm of European Style Products}{subsubsection.5.1.2}{}}
+\@writefile{loa}{\contentsline {algorithm}{\numberline {3}{\ignorespaces Training of the Pricing Operator Network on $[T_1, T_2]$ under Jump Diffusions}}{24}{algorithm.3}\protected@file@percent }
+\newlabel{alg:euro_algo_jump}{{3}{24}{Algorithm of European Style Products}{algorithm.3}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.3}Case 1: Callable Yield Note under Stochastic Volatility Jump Model}{24}{subsubsection.5.1.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.4}Case 2: Stochastic Local Volatility Jump Model under Hull White Interest Rate}{26}{subsubsection.5.1.4}\protected@file@percent }
+\citation{gnoatto2023deep}
+\citation{gnoatto2023deep}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Experiments}{27}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusions}{27}{section.6}\protected@file@percent }
+\newlabel{sec:conclusion}{{6}{27}{Conclusions}{section.6}{}}
+\newlabel{appendix}{{6}{28}{Conclusions}{section.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Some Analytical Solutions}{28}{appendix.A}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {B}Analytical Solutions under Time-dependent GBM Cases}{28}{appendix.B}\protected@file@percent }
+\newlabel{appendix}{{B}{28}{Analytical Solutions under Time-dependent GBM Cases}{appendix.B}{}}
+\bibstyle{chicagoa}
+\bibdata{reference}
+\bibcite{tensorflow2015-whitepaper}{{1}{2015}{{Abadi et~al.}}{{Abadi, Agarwal, Barham, Brevdo, Chen, Citro, Corrado, Davis, Dean, Devin, Ghemawat, Goodfellow, Harp, Irving, Isard, Jia, Jozefowicz, Kaiser, Kudlur, Levenberg, Man\'{e}, Monga, Moore, Murray, Olah, Schuster, Shlens, Steiner, Sutskever, Talwar, Tucker, Vanhoucke, Vasudevan, Vi\'{e}gas, Vinyals, Warden, Wattenberg, Wicke, Yu, and Zheng}}}
+\bibcite{bates1996jumps}{{2}{1996}{{Bates}}{{Bates}}}
+\bibcite{bayraktar2022deep}{{3}{2022}{{Bayraktar et~al.}}{{Bayraktar, Feng, and Zhang}}}
+\bibcite{beck2021deep}{{4}{2021}{{Beck et~al.}}{{Beck, Becker, Cheridito, Jentzen, and Neufeld}}}
+\bibcite{berner2020numerically}{{5}{2020}{{Berner et~al.}}{{Berner, Dablander, and Grohs}}}
+\bibcite{chen1995universal}{{6}{1995}{{Chen and Chen}}{{Chen and Chen}}}
+\bibcite{duffy2013finite}{{7}{2013}{{Duffy}}{{Duffy}}}
+\bibcite{feng2021deep}{{8}{2021}{{Feng et~al.}}{{Feng, Luo, and Zhang}}}
+\bibcite{gao2022convergence}{{9}{2022}{{Gao et~al.}}{{Gao, Gao, Hu, and Zhu}}}
+\bibcite{germain2022deepsets}{{10}{2022}{{Germain et~al.}}{{Germain, Lauri{\`e}re, Pham, and Warin}}}
+\bibcite{glasserman2004monte}{{11}{2004}{{Glasserman}}{{Glasserman}}}
+\bibcite{glau2022deep}{{12}{2022}{{Glau and Wunderlich}}{{Glau and Wunderlich}}}
+\bibcite{glorot2010understanding}{{13}{2010}{{Glorot and Bengio}}{{Glorot and Bengio}}}
+\bibcite{gnoatto2022deep}{{14}{2022}{{Gnoatto et~al.}}{{Gnoatto, Patacca, and Picarelli}}}
+\bibcite{gnoatto2023deep}{{15}{2023}{{Gnoatto et~al.}}{{Gnoatto, Picarelli, and Reisinger}}}
+\bibcite{gu2021selectnet}{{16}{2021}{{Gu et~al.}}{{Gu, Yang, and Zhou}}}
+\bibcite{han2017deep}{{17}{2017}{{Han et~al.}}{{Han, Jentzen, et~al.}}}
+\bibcite{han2018solving}{{18}{2018}{{Han et~al.}}{{Han, Jentzen, and E}}}
+\bibcite{heston1993closed}{{19}{1993}{{Heston}}{{Heston}}}
+\bibcite{hilber2013computational}{{20}{2013}{{Hilber et~al.}}{{Hilber, Reichmann, Schwab, and Winter}}}
+\bibcite{hure2020deep}{{21}{2020}{{Hur{\'e} et~al.}}{{Hur{\'e}, Pham, and Warin}}}
+\bibcite{ioffe2015batch}{{22}{2015}{{Ioffe and Szegedy}}{{Ioffe and Szegedy}}}
+\bibcite{jacquier2019deep}{{23}{2019}{{Jacquier and Oumgari}}{{Jacquier and Oumgari}}}
+\bibcite{kingma2014adam}{{24}{2014}{{Kingma and Ba}}{{Kingma and Ba}}}
+\bibcite{lapeyre2021neural}{{25}{2021}{{Lapeyre and Lelong}}{{Lapeyre and Lelong}}}
+\bibcite{liang2021deep}{{26}{2021}{{Liang et~al.}}{{Liang, Xu, and Li}}}
+\bibcite{longstaff2001valuing}{{27}{2001}{{Longstaff and Schwartz}}{{Longstaff and Schwartz}}}
+\bibcite{lu2021learning}{{28}{2021}{{Lu et~al.}}{{Lu, Jin, Pang, Zhang, and Karniadakis}}}
+\bibcite{mijatovic2013continuously}{{29}{2013}{{Mijatovi{\'c} and Pistorius}}{{Mijatovi{\'c} and Pistorius}}}
+\bibcite{sabate2020solving}{{30}{2020}{{Sabate-Vidales et~al.}}{{Sabate-Vidales, {\v {S}}i{\v {s}}ka, and Szpruch}}}
+\bibcite{saporito2020pdgm}{{31}{2020}{{Saporito and Zhang}}{{Saporito and Zhang}}}
+\bibcite{sirignano2018dgm}{{32}{2018}{{Sirignano and Spiliopoulos}}{{Sirignano and Spiliopoulos}}}
+\bibcite{tan2022enhanced}{{33}{2022}{{Tan and Chen}}{{Tan and Chen}}}
+\bibcite{wang2018deep}{{34}{2018}{{Wang et~al.}}{{Wang, Chen, Sudjianto, Liu, and Shen}}}
+\bibcite{yamakami2022pricing}{{35}{2022}{{Yamakami and Takeuchi}}{{Yamakami and Takeuchi}}}
+\bibcite{zhang2019analysis}{{36}{2019}{{Zhang and Li}}{{Zhang and Li}}}
+\gdef \@abspage@last{31}
