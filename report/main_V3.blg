@@ -1,0 +1,69 @@
+This is BibTeX, Version 0.99d (TeX Live 2023)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: main_V3.aux
+The style file: chicagoa.bst
+Database file #1: reference.bib
+Warning--no number and no volume in bayraktar2022deep
+Warning--page numbers missing in bayraktar2022deep
+Warning--no number and no volume in feng2021deep
+Warning--page numbers missing in feng2021deep
+Warning--no number and no volume in gao2022convergence
+Warning--page numbers missing in gao2022convergence
+Warning--no number and no volume in gnoatto2022deep
+Warning--page numbers missing in gnoatto2022deep
+Warning--no number and no volume in jacquier2019deep
+Warning--page numbers missing in jacquier2019deep
+Warning--no number and no volume in kingma2014adam
+Warning--page numbers missing in kingma2014adam
+Warning--no number and no volume in sabate2020solving
+Warning--page numbers missing in sabate2020solving
+Warning--no number and no volume in saporito2020pdgm
+Warning--page numbers missing in saporito2020pdgm
+Warning--no number and no volume in tan2022enhanced
+Warning--page numbers missing in tan2022enhanced
+Warning--no number and no volume in wang2018deep
+Warning--page numbers missing in wang2018deep
+Warning--no number and no volume in yamakami2022pricing
+Warning--page numbers missing in yamakami2022pricing
+You've used 36 entries,
+            2905 wiz_defined-function locations,
+            828 strings with 12577 characters,
+and the built_in function-call counts, 29280 in all, are:
+= -- 2270
+> -- 2712
+< -- 3
++ -- 852
+- -- 920
+* -- 2881
+:= -- 5407
+add.period$ -- 110
+call.type$ -- 36
+change.case$ -- 308
+chr.to.int$ -- 36
+cite$ -- 58
+duplicate$ -- 647
+empty$ -- 1501
+format.name$ -- 1048
+if$ -- 5374
+int.to.chr$ -- 1
+int.to.str$ -- 0
+missing$ -- 38
+newline$ -- 216
+num.names$ -- 360
+pop$ -- 225
+preamble$ -- 1
+purify$ -- 527
+quote$ -- 0
+skip$ -- 714
+stack$ -- 0
+substring$ -- 1266
+swap$ -- 214
+text.length$ -- 3
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 690
+warning$ -- 22
+while$ -- 329
+width$ -- 0
+write$ -- 511
+(There were 22 warnings)

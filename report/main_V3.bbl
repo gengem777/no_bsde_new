@@ -1,0 +1,295 @@
+\begin{thebibliography}{}
+
+\bibitem[\protect\citeauthoryear{Abadi, Agarwal, Barham, Brevdo, Chen, Citro,
+  Corrado, Davis, Dean, Devin, Ghemawat, Goodfellow, Harp, Irving, Isard, Jia,
+  Jozefowicz, Kaiser, Kudlur, Levenberg, Man\'{e}, Monga, Moore, Murray, Olah,
+  Schuster, Shlens, Steiner, Sutskever, Talwar, Tucker, Vanhoucke, Vasudevan,
+  Vi\'{e}gas, Vinyals, Warden, Wattenberg, Wicke, Yu, and Zheng}{Abadi
+  et~al.}{2015}]{tensorflow2015-whitepaper}
+Abadi, M., A.~Agarwal, P.~Barham, E.~Brevdo, Z.~Chen, C.~Citro, G.~S. Corrado,
+  A.~Davis, J.~Dean, M.~Devin, S.~Ghemawat, I.~Goodfellow, A.~Harp, G.~Irving,
+  M.~Isard, Y.~Jia, R.~Jozefowicz, L.~Kaiser, M.~Kudlur, J.~Levenberg,
+  D.~Man\'{e}, R.~Monga, S.~Moore, D.~Murray, C.~Olah, M.~Schuster, J.~Shlens,
+  B.~Steiner, I.~Sutskever, K.~Talwar, P.~Tucker, V.~Vanhoucke, V.~Vasudevan,
+  F.~Vi\'{e}gas, O.~Vinyals, P.~Warden, M.~Wattenberg, M.~Wicke, Y.~Yu, and
+  X.~Zheng (2015).
+\newblock {TensorFlow}: Large-scale machine learning on heterogeneous systems.
+\newblock Software available from tensorflow.org.
+
+\bibitem[\protect\citeauthoryear{Bates}{Bates}{1996}]{bates1996jumps}
+Bates, D.~S. (1996).
+\newblock Jumps and stochastic volatility: Exchange rate processes implicit in
+  deutsche mark options.
+\newblock {\em The Review of Financial Studies\/}~{\em 9\/}(1), 69--107.
+
+
+\bibitem[\protect\citeauthoryear{Bayraktar, Feng, and Zhang}{Bayraktar
+  et~al.}{2022}]{bayraktar2022deep}
+Bayraktar, E., Q.~Feng, and Z.~Zhang (2022).
+\newblock {D}eep {S}ignature {A}lgorithm for {P}ath-dependent {A}merican
+  {O}ption {P}ricing.
+\newblock {\em arXiv preprint arXiv:2211.11691\/}.
+
+
+\bibitem[\protect\citeauthoryear{Beck, Becker, Cheridito, Jentzen, and
+  Neufeld}{Beck et~al.}{2021}]{beck2021deep}
+Beck, C., S.~Becker, P.~Cheridito, A.~Jentzen, and A.~Neufeld (2021).
+\newblock {D}eep {S}plitting {M}ethod for {P}arabolic {PDE}s.
+\newblock {\em SIAM Journal on Scientific Computing\/}~{\em 43\/}(5),
+  A3135--A3154.
+
+
+\bibitem[\protect\citeauthoryear{Berner, Dablander, and Grohs}{Berner
+  et~al.}{2020}]{berner2020numerically}
+Berner, J., M.~Dablander, and P.~Grohs (2020).
+\newblock Numerically solving parametric families of high-dimensional
+  {K}olmogorov partial differential equations via deep learning.
+\newblock {\em Advances in Neural Information Processing Systems\/}~{\em 33},
+  16615--16627.
+
+
+\bibitem[\protect\citeauthoryear{Chen and Chen}{Chen and
+  Chen}{1995}]{chen1995universal}
+Chen, T. and H.~Chen (1995).
+\newblock {U}niversal approximation to nonlinear operators by neural networks
+  with arbitrary activation functions and its application to dynamical systems.
+\newblock {\em IEEE Transactions on Neural Networks\/}~{\em 6\/}(4), 911--917.
+
+
+\bibitem[\protect\citeauthoryear{Duffy}{Duffy}{2013}]{duffy2013finite}
+Duffy, D.~J. (2013).
+\newblock {\em Finite Difference Methods in Financial Engineering: a Partial
+  Differential Equation Approach}.
+\newblock John Wiley \& Sons.
+
+
+\bibitem[\protect\citeauthoryear{Feng, Luo, and Zhang}{Feng
+  et~al.}{2021}]{feng2021deep}
+Feng, Q., M.~Luo, and Z.~Zhang (2021).
+\newblock {D}eep {S}ignature {FBSDE} {A}lgorithm.
+\newblock {\em arXiv preprint arXiv:2108.10504\/}.
+
+
+\bibitem[\protect\citeauthoryear{Gao, Gao, Hu, and Zhu}{Gao
+  et~al.}{2022}]{gao2022convergence}
+Gao, C., S.~Gao, R.~Hu, and Z.~Zhu (2022).
+\newblock {C}onvergence of the {B}ackward {D}eep bsde {M}ethod with
+  {A}pplications to {O}ptimal {S}topping {P}roblems.
+\newblock {\em arXiv preprint arXiv:2210.04118\/}.
+
+
+\bibitem[\protect\citeauthoryear{Germain, Lauri{\`e}re, Pham, and
+  Warin}{Germain et~al.}{2022}]{germain2022deepsets}
+Germain, M., M.~Lauri{\`e}re, H.~Pham, and X.~Warin (2022).
+\newblock {D}eep{S}ets and {T}heir {D}erivative {N}etworks for {S}olving
+  {S}ymmetric {PDE}s.
+\newblock {\em Journal of Scientific Computing\/}~{\em 91\/}(2), 63.
+
+
+\bibitem[\protect\citeauthoryear{Glasserman}{Glasserman}{2004}]{glasserman2004monte}
+Glasserman, P. (2004).
+\newblock {\em {M}onte {C}arlo {M}ethods in {F}inancial {E}ngineering},
+  Volume~53.
+\newblock Springer.
+
+
+\bibitem[\protect\citeauthoryear{Glau and Wunderlich}{Glau and
+  Wunderlich}{2022}]{glau2022deep}
+Glau, K. and L.~Wunderlich (2022).
+\newblock The {D}eep {P}arametric {PDE} {M}ethod and {A}pplications to {O}ption
+  {P}ricing.
+\newblock {\em Applied Mathematics and Computation\/}~{\em 432}, 127355.
+
+
+\bibitem[\protect\citeauthoryear{Glorot and Bengio}{Glorot and
+  Bengio}{2010}]{glorot2010understanding}
+Glorot, X. and Y.~Bengio (2010).
+\newblock Understanding the difficulty of training deep feedforward neural
+  networks.
+\newblock In {\em Proceedings of the thirteenth international conference on
+  artificial intelligence and statistics}, pp.\  249--256. JMLR Workshop and
+  Conference Proceedings.
+
+\bibitem[\protect\citeauthoryear{Gnoatto, Patacca, and Picarelli}{Gnoatto
+  et~al.}{2022}]{gnoatto2022deep}
+Gnoatto, A., M.~Patacca, and A.~Picarelli (2022).
+\newblock {A} {D}eep {S}olver for {BSDE}s with {J}umps.
+\newblock {\em arXiv preprint arXiv:2211.04349\/}.
+
+
+\bibitem[\protect\citeauthoryear{Gnoatto, Picarelli, and Reisinger}{Gnoatto
+  et~al.}{2023}]{gnoatto2023deep}
+Gnoatto, A., A.~Picarelli, and C.~Reisinger (2023).
+\newblock {D}eep xva {S}olver: {A} {N}eural {N}etwork-{B}ased {C}ounterparty
+  {C}redit {R}isk {M}anagement {F}ramework.
+\newblock {\em SIAM Journal on Financial Mathematics\/}~{\em 14\/}(1),
+  314--352.
+
+
+\bibitem[\protect\citeauthoryear{Gu, Yang, and Zhou}{Gu
+  et~al.}{2021}]{gu2021selectnet}
+Gu, Y., H.~Yang, and C.~Zhou (2021).
+\newblock Selectnet: Self-paced learning for high-dimensional partial
+  differential equations.
+\newblock {\em Journal of Computational Physics\/}~{\em 441}, 110444.
+
+
+\bibitem[\protect\citeauthoryear{Han, Jentzen, et~al.}{Han
+  et~al.}{2017}]{han2017deep}
+Han, J., A.~Jentzen, et~al. (2017).
+\newblock {D}eep {L}earning-based {N}umerical {M}ethods for {H}igh-dimensional
+  {P}arabolic {P}artial {D}ifferential {E}quations and {B}ackward {S}tochastic
+  {D}ifferential {E}quations.
+\newblock {\em Communications in Mathematics and Statistics\/}~{\em 5\/}(4),
+  349--380.
+
+
+\bibitem[\protect\citeauthoryear{Han, Jentzen, and E}{Han
+  et~al.}{2018}]{han2018solving}
+Han, J., A.~Jentzen, and W.~E (2018).
+\newblock Solving high-dimensional partial differential equations using deep
+  learning.
+\newblock {\em Proceedings of the National Academy of Sciences\/}~{\em
+  115\/}(34), 8505--8510.
+
+
+\bibitem[\protect\citeauthoryear{Heston}{Heston}{1993}]{heston1993closed}
+Heston, S.~L. (1993).
+\newblock A closed-form solution for options with stochastic volatility with
+  applications to bond and currency options.
+\newblock {\em The Review of Financial Studies\/}~{\em 6\/}(2), 327--343.
+
+
+\bibitem[\protect\citeauthoryear{Hilber, Reichmann, Schwab, and Winter}{Hilber
+  et~al.}{2013}]{hilber2013computational}
+Hilber, N., O.~Reichmann, C.~Schwab, and C.~Winter (2013).
+\newblock {\em Computational Methods for Quantitative Finance: Finite Element
+  Methods for Derivative Pricing}.
+\newblock Springer Science \& Business Media.
+
+
+\bibitem[\protect\citeauthoryear{Hur{\'e}, Pham, and Warin}{Hur{\'e}
+  et~al.}{2020}]{hure2020deep}
+Hur{\'e}, C., H.~Pham, and X.~Warin (2020).
+\newblock {D}eep {B}ackward {S}chemes for {H}igh-dimensional {N}onlinear
+  {PDE}s.
+\newblock {\em Mathematics of Computation\/}~{\em 89\/}(324), 1547--1579.
+
+
+\bibitem[\protect\citeauthoryear{Ioffe and Szegedy}{Ioffe and
+  Szegedy}{2015}]{ioffe2015batch}
+Ioffe, S. and C.~Szegedy (2015).
+\newblock {B}atch {N}ormalization: {A}ccelerating {D}eep {N}etwork {T}raining
+  by {R}educing {I}nternal {C}ovariate {S}hift.
+\newblock In {\em International Conference on Machine Learning}, pp.\
+  448--456. pmlr.
+
+\bibitem[\protect\citeauthoryear{Jacquier and Oumgari}{Jacquier and
+  Oumgari}{2019}]{jacquier2019deep}
+Jacquier, A.~J. and M.~Oumgari (2019).
+\newblock {D}eep {PPDE}s for rough local stochastic volatility.
+\newblock {\em Available at SSRN 3400035\/}.
+
+
+\bibitem[\protect\citeauthoryear{Kingma and Ba}{Kingma and
+  Ba}{2014}]{kingma2014adam}
+Kingma, D.~P. and J.~Ba (2014).
+\newblock {A}dam: {A} method for stochastic optimization.
+\newblock {\em arXiv preprint arXiv:1412.6980\/}.
+
+
+\bibitem[\protect\citeauthoryear{Lapeyre and Lelong}{Lapeyre and
+  Lelong}{2021}]{lapeyre2021neural}
+Lapeyre, B. and J.~Lelong (2021).
+\newblock {N}eural network regression for {B}ermudan option pricing.
+\newblock {\em Monte Carlo Methods and Applications\/}~{\em 27\/}(3), 227--247.
+
+
+\bibitem[\protect\citeauthoryear{Liang, Xu, and Li}{Liang
+  et~al.}{2021}]{liang2021deep}
+Liang, J., Z.~Xu, and P.~Li (2021).
+\newblock Deep learning-based least squares forward-backward stochastic
+  differential equation solver for high-dimensional derivative pricing.
+\newblock {\em Quantitative Finance\/}~{\em 21\/}(8), 1309--1323.
+
+
+\bibitem[\protect\citeauthoryear{Longstaff and Schwartz}{Longstaff and
+  Schwartz}{2001}]{longstaff2001valuing}
+Longstaff, F.~A. and E.~S. Schwartz (2001).
+\newblock {V}aluing {A}merican options by simulation: a simple least-squares
+  approach.
+\newblock {\em The Review of Financial Studies\/}~{\em 14\/}(1), 113--147.
+
+
+\bibitem[\protect\citeauthoryear{Lu, Jin, Pang, Zhang, and Karniadakis}{Lu
+  et~al.}{2021}]{lu2021learning}
+Lu, L., P.~Jin, G.~Pang, Z.~Zhang, and G.~E. Karniadakis (2021).
+\newblock {L}earning nonlinear operators via {D}eep{ON}et based on the
+  universal approximation theorem of operators.
+\newblock {\em Nature Machine Intelligence\/}~{\em 3\/}(3), 218--229.
+
+
+\bibitem[\protect\citeauthoryear{Mijatovi{\'c} and Pistorius}{Mijatovi{\'c} and
+  Pistorius}{2013}]{mijatovic2013continuously}
+Mijatovi{\'c}, A. and M.~Pistorius (2013).
+\newblock Continuously monitored barrier options under {M}arkov processes.
+\newblock {\em Mathematical Finance\/}~{\em 23\/}(1), 1--38.
+
+
+\bibitem[\protect\citeauthoryear{Sabate-Vidales, {\v{S}}i{\v{s}}ka, and
+  Szpruch}{Sabate-Vidales et~al.}{2020}]{sabate2020solving}
+Sabate-Vidales, M., D.~{\v{S}}i{\v{s}}ka, and L.~Szpruch (2020).
+\newblock {S}olving path dependent {PDE}s with {LSTM} networks and path
+  signatures.
+\newblock {\em arXiv preprint arXiv:2011.10630\/}.
+
+
+\bibitem[\protect\citeauthoryear{Saporito and Zhang}{Saporito and
+  Zhang}{2020}]{saporito2020pdgm}
+Saporito, Y.~F. and Z.~Zhang (2020).
+\newblock {PDGM}: a neural network approach to solve path-dependent partial
+  differential equations.
+\newblock {\em arXiv preprint arXiv:2003.02035\/}.
+
+
+\bibitem[\protect\citeauthoryear{Sirignano and Spiliopoulos}{Sirignano and
+  Spiliopoulos}{2018}]{sirignano2018dgm}
+Sirignano, J. and K.~Spiliopoulos (2018).
+\newblock {DGM}: {A} deep learning algorithm for solving partial differential
+  equations.
+\newblock {\em Journal of Computational Physics\/}~{\em 375}, 1339--1364.
+
+
+\bibitem[\protect\citeauthoryear{Tan and Chen}{Tan and
+  Chen}{2022}]{tan2022enhanced}
+Tan, L. and L.~Chen (2022).
+\newblock {E}nhanced {D}eep{ON}et for modeling partial differential operators
+  considering multiple input functions.
+\newblock {\em arXiv preprint arXiv:2202.08942\/}.
+
+
+\bibitem[\protect\citeauthoryear{Wang, Chen, Sudjianto, Liu, and Shen}{Wang
+  et~al.}{2018}]{wang2018deep}
+Wang, H., H.~Chen, A.~Sudjianto, R.~Liu, and Q.~Shen (2018).
+\newblock {D}eep learning-based {BSDE} solver for {LIBOR} market model with
+  application to {B}ermudan swaption pricing and hedging.
+\newblock {\em arXiv preprint arXiv:1807.06622\/}.
+
+
+\bibitem[\protect\citeauthoryear{Yamakami and Takeuchi}{Yamakami and
+  Takeuchi}{2022}]{yamakami2022pricing}
+Yamakami, T. and Y.~Takeuchi (2022).
+\newblock Pricing {B}ermudan swaption under two factor {H}ull-{W}hite model
+  with fast {G}auss transform.
+\newblock {\em arXiv preprint arXiv:2212.08250\/}.
+
+
+\bibitem[\protect\citeauthoryear{Zhang and Li}{Zhang and
+  Li}{2019}]{zhang2019analysis}
+Zhang, G. and L.~Li (2019).
+\newblock Analysis of {M}arkov chain approximation for option pricing and
+  hedging: Grid design and convergence behavior.
+\newblock {\em Operations Research\/}~{\em 67\/}(2), 407--427.
+
+
+\end{thebibliography}
